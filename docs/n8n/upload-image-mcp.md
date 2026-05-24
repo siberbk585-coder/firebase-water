@@ -2,7 +2,7 @@
 
 App gửi ảnh lên webhook n8n của bạn; workflow n8n xử lý và **trả JSON có `url`**.
 
-**Webhook production:** https://iatzhxxuk.tino.page/webhook/luuhinhanh
+**Webhook:** cấu hình qua `N8N_IMAGE_WEBHOOK_URL` (vd `https://your-n8n.example/webhook/luuhinhanh`)
 
 ---
 
@@ -29,7 +29,7 @@ Chi tiết có ảnh:
 
 ```mermaid
 sequenceDiagram
-  participant App as water-ocr-billing
+  participant App as firebase-water
   participant N8n as n8n luuhinhanh
   participant DB as Postgres
 
@@ -48,7 +48,7 @@ Code: `uploadReadingImageViaN8n()` chỉ chạy khi có buffer ảnh; `submitMan
 
 | Biến | Giá trị |
 |------|---------|
-| `N8N_IMAGE_WEBHOOK_URL` | `https://iatzhxxuk.tino.page/webhook/luuhinhanh` (mặc định nếu không set) |
+| `N8N_IMAGE_WEBHOOK_URL` | URL webhook n8n của bạn (bắt buộc nếu dùng luồng ảnh qua n8n) |
 
 Để **tắt** webhook và dùng Blob/local: set `N8N_IMAGE_WEBHOOK_URL=` (rỗng).
 
@@ -71,7 +71,7 @@ Khi webhook được bật, app **không** cần `BLOB_READ_WRITE_TOKEN` cho lu�
 | `filename` | Tên file có **thời gian**, vd `20260521_153045_reading_212001.jpg` |
 | `uploaded_at` | ISO giờ VN, vd `2026-05-21T15:30:45+07:00` |
 | `content_type` | MIME, vd `image/jpeg` |
-| `source` | `water-ocr-billing` |
+| `source` | `firebase-water` |
 | `householdId` | ID hộ (khi gửi từ app) |
 | `periodId` | ID kỳ |
 | `householdCode` | MKH, vd `212001` |
@@ -99,7 +99,7 @@ Node **Respond to Webhook** trả JSON có **link ảnh** — app đọc các tr
       "householdId": "...",
       "householdCode": "HH00001",
       "periodId": "...",
-      "source": "water-ocr-billing"
+      "source": "firebase-water"
     }
   }
 ]
@@ -128,9 +128,9 @@ Import [`workflow-luuhinhanh.json`](./workflow-luuhinhanh.json) vào n8n (path `
 ## 5. Test webhook (curl)
 
 ```bash
-curl -X POST "https://iatzhxxuk.tino.page/webhook/luuhinhanh" \
+curl -X POST "$N8N_IMAGE_WEBHOOK_URL" \
   -F "image=@/path/to/meter.jpg" \
-  -F "source=water-ocr-billing" \
+  -F "source=firebase-water" \
   -F "householdCode=212001" \
   -F "confirmedValue=913"
 ```

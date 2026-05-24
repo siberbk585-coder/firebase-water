@@ -1,5 +1,5 @@
 {
-  "name": "Water OCR - Upload ảnh trả URL",
+  "name": "Firebase Water - Upload ảnh trả URL",
   "nodes": [
     {
       "parameters": {
@@ -13,12 +13,12 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [0, 0],
-      "webhookId": "water-upload-meter"
+      "webhookId": "firebase-water-upload-meter"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.WATER_OCR_API_URL || 'https://water-ocr-billing.vercel.app' }}/api/uploads/image",
+        "url": "={{ $env.FIREBASE_WATER_API_URL || 'https://firebase-water.vercel.app' }}/api/uploads/image",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -43,7 +43,7 @@
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Water OCR Upload API Key"
+          "name": "Firebase Water Upload API Key"
         }
       },
       "notes": "Header Auth: Authorization = Bearer <UPLOAD_API_KEY>"

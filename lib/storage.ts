@@ -11,9 +11,9 @@ function storageRoot(): string {
   const configured = env.storageDir().replace(/^\/+/, "");
   if (isServerlessFs()) {
     if (configured.startsWith("tmp/") || configured === "tmp") {
-      return path.join("/tmp", configured === "tmp" ? "water-ocr-storage" : configured.slice(4));
+      return path.join("/tmp", configured === "tmp" ? "firebase-water-storage" : configured.slice(4));
     }
-    return path.join("/tmp", configured || "water-ocr-storage");
+    return path.join("/tmp", configured || "firebase-water-storage");
   }
   return path.resolve(process.cwd(), configured || "storage");
 }

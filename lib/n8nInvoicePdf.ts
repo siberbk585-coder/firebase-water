@@ -6,11 +6,10 @@ export type N8nInvoiceUploadResult = {
   raw?: unknown;
 };
 
-const DEFAULT_WEBHOOK = "https://iatzhxxuk.tino.page/webhook/Hoadon";
-
 export function n8nInvoiceWebhookUrl(): string | null {
   if (process.env.N8N_INVOICE_WEBHOOK_DISABLED === "true") return null;
-  return process.env.N8N_INVOICE_WEBHOOK_URL?.trim() || DEFAULT_WEBHOOK;
+  const url = process.env.N8N_INVOICE_WEBHOOK_URL?.trim();
+  return url || null;
 }
 
 export type InvoicePdfUploadMeta = {
@@ -45,7 +44,7 @@ export async function postInvoicePdfToN8nWebhook(
   form.append("filename", filename);
   form.append("uploaded_at", uploadedAtIso());
   form.append("content_type", "application/pdf");
-  form.append("source", "water-ocr-billing");
+  form.append("source", "firebase-water");
   form.append("invoiceId", meta.invoiceId);
   form.append("householdId", meta.householdId);
   form.append("periodId", meta.periodId);

@@ -1,11 +1,10 @@
 import { buildTransferNote } from "./paymentQr";
 import { formatPeriod } from "./vi";
 
-const DEFAULT_ZALO_WEBHOOK = "https://iatzhxxuk.tino.page/webhook/send-invoice-zalo";
-
 export function n8nZaloWebhookUrl(): string | null {
   if (process.env.N8N_ZALO_WEBHOOK_DISABLED === "true") return null;
-  return process.env.N8N_ZALO_WEBHOOK_URL?.trim() || DEFAULT_ZALO_WEBHOOK;
+  const url = process.env.N8N_ZALO_WEBHOOK_URL?.trim();
+  return url || null;
 }
 
 export type InvoiceZaloPayload = {
@@ -40,7 +39,7 @@ export async function sendInvoiceViaN8n(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      source: "water-ocr-billing",
+      source: "firebase-water",
       ...payload,
       pdfUrl: payload.pdfUrl ?? `${appUrl}/api/invoices/${payload.invoiceId}/pdf`,
       transferNote:

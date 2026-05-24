@@ -3,7 +3,7 @@
  * MCP server: upload ảnh → trả URL (cho n8n MCP Client node).
  *
  * Chạy:
- *   WATER_OCR_API_URL=https://water-ocr-billing.vercel.app \
+ *   FIREBASE_WATER_API_URL=https://firebase-water.vercel.app \
  *   UPLOAD_API_KEY=your-secret \
  *   node scripts/mcp-image-upload.mjs
  *
@@ -13,7 +13,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-const API_BASE = (process.env.WATER_OCR_API_URL || "http://localhost:3001").replace(/\/$/, "");
+const API_BASE = (process.env.FIREBASE_WATER_API_URL || "http://localhost:3001").replace(/\/$/, "");
 const API_KEY = process.env.UPLOAD_API_KEY || "";
 
 async function postImage(body) {
@@ -33,7 +33,7 @@ async function postImage(body) {
 }
 
 const server = new McpServer({
-  name: "water-image-upload",
+  name: "firebase-water-image-upload",
   version: "1.0.0",
 });
 

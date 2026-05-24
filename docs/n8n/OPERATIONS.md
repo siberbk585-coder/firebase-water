@@ -27,7 +27,7 @@ Chi tiết: [hoadon-invoice.md](./hoadon-invoice.md).
 
 ```json
 {
-  "source": "water-ocr-billing",
+  "source": "firebase-water",
   "invoiceId": "...",
   "householdCode": "HH00001",
   "residentName": "Nguyễn Văn A",

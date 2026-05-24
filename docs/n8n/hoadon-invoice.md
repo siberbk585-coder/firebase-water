@@ -2,13 +2,13 @@
 
 App tạo PDF (có QR VietQR) rồi **POST multipart** lên n8n; workflow lưu (Drive, …) và **trả link**. DB chỉ lưu URL trong `Invoice.pdfPath` — không lưu file trên Vercel.
 
-**Webhook production:** https://iatzhxxuk.tino.page/webhook/Hoadon
+**Webhook:** cấu hình qua `N8N_INVOICE_WEBHOOK_URL` (vd `https://your-n8n.example/webhook/Hoadon`)
 
 ## Env app
 
-| Biến | Mặc định |
-|------|----------|
-| `N8N_INVOICE_WEBHOOK_URL` | `https://iatzhxxuk.tino.page/webhook/Hoadon` |
+| Biến | Mô tả |
+|------|--------|
+| `N8N_INVOICE_WEBHOOK_URL` | URL webhook n8n lưu PDF (bắt buộc nếu dùng luồng Drive) |
 | `N8N_INVOICE_WEBHOOK_DISABLED` | `true` → fallback lưu `storage/invoices/` (chỉ dev) |
 
 ## Payload gửi tới n8n
@@ -24,7 +24,7 @@ App tạo PDF (có QR VietQR) rồi **POST multipart** lên n8n; workflow lưu (
 | `householdCode`, `meterCode` | |
 | `periodLabel` | VD `Tháng 5/2026` |
 | `totalAmount` | Số tiền |
-| `source` | `water-ocr-billing` |
+| `source` | `firebase-water` |
 
 ## Response bắt buộc
 
@@ -72,11 +72,11 @@ Response mẫu từ n8n (mảng — app đọc được):
 ## Test curl
 
 ```bash
-curl -X POST "https://iatzhxxuk.tino.page/webhook/Hoadon" \
+curl -X POST "$N8N_INVOICE_WEBHOOK_URL" \
   -F "pdf=@/tmp/test-invoice.pdf;type=application/pdf" \
   -F "householdCode=HH00001" \
   -F "invoiceId=test-id" \
-  -F "source=water-ocr-billing"
+  -F "source=firebase-water"
 ```
 
 ## Lỗi thường gặp

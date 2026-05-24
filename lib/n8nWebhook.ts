@@ -6,11 +6,10 @@ export type N8nImageUploadResult = {
   raw?: unknown;
 };
 
-const DEFAULT_WEBHOOK = "https://iatzhxxuk.tino.page/webhook/luuhinhanh";
-
 export function n8nImageWebhookUrl(): string | null {
   if (process.env.N8N_IMAGE_WEBHOOK_DISABLED === "true") return null;
-  return process.env.N8N_IMAGE_WEBHOOK_URL?.trim() || DEFAULT_WEBHOOK;
+  const url = process.env.N8N_IMAGE_WEBHOOK_URL?.trim();
+  return url || null;
 }
 
 /** Gửi ảnh lên webhook n8n — workflow n8n trả `url` (Respond to Webhook). */
@@ -46,7 +45,7 @@ export async function postImageToN8nWebhook(
   form.append("filename", filename);
   form.append("uploaded_at", uploadedAtIso());
   form.append("content_type", contentType);
-  form.append("source", "water-ocr-billing");
+  form.append("source", "firebase-water");
   if (meta?.householdId) form.append("householdId", meta.householdId);
   if (meta?.periodId) form.append("periodId", meta.periodId);
   if (meta?.householdCode) form.append("householdCode", meta.householdCode);

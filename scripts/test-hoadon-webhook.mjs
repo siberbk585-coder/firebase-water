@@ -5,9 +5,11 @@
  */
 import { readFileSync, writeFileSync, existsSync } from "fs";
 
-const WEBHOOK =
-  process.env.N8N_INVOICE_WEBHOOK_URL?.trim() ||
-  "https://iatzhxxuk.tino.page/webhook/Hoadon";
+const WEBHOOK = process.env.N8N_INVOICE_WEBHOOK_URL?.trim();
+if (!WEBHOOK) {
+  console.error("Thiếu N8N_INVOICE_WEBHOOK_URL — set biến môi trường trước khi chạy test.");
+  process.exit(1);
+}
 
 const pdfPath = process.argv[2] || "/tmp/test-invoice.pdf";
 if (!existsSync(pdfPath)) {
@@ -23,7 +25,7 @@ const form = new FormData();
 form.append("pdf", new Blob([buf], { type: "application/pdf" }), "test_invoice.pdf");
 form.append("householdCode", "HH00001");
 form.append("invoiceId", `test-${Date.now()}`);
-form.append("source", "water-ocr-billing-test");
+form.append("source", "firebase-water-test");
 
 console.log("POST", WEBHOOK);
 const res = await fetch(WEBHOOK, { method: "POST", body: form });
