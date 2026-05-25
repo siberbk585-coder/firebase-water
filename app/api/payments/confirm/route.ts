@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { InvoiceStatus, UserRole } from "@prisma/client";
+import { InvoiceStatus, UserRole } from "@/lib/types/enums";
+import { PaymentMethod } from "@prisma/client";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
 const schema = z.object({
   invoiceId: z.string(),
-  method: z.string().default("CASH"),
+  method: z.nativeEnum(PaymentMethod).default(PaymentMethod.CASH),
   note: z.string().optional(),
 });
 
@@ -55,6 +57,10 @@ export async function POST(request: Request) {
     entity: "Invoice",
     entityId: invoice.id,
   });
+
+  revalidatePath("/admin/payments");
+  revalidatePath("/admin/billing-sheet");
+  revalidatePath("/admin/dashboard");
 
   return NextResponse.json({ ok: true });
 }

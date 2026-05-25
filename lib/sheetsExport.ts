@@ -1,4 +1,4 @@
-import type { InputMethod, ReadingStatus } from "@prisma/client";
+import type { InputMethod, ReadingStatus } from "@/lib/types/enums";
 import { parseAnomalyFlags } from "./anomaly";
 import { prisma } from "./db";
 import { env } from "./env";

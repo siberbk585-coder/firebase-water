@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function ConfirmPaymentButton({ invoiceId }: { invoiceId: string }) {
+export function ConfirmPaymentButton({
+  invoiceId,
+  method,
+}: {
+  invoiceId: string;
+  method: "CASH" | "BANK_TRANSFER";
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -12,7 +18,7 @@ export function ConfirmPaymentButton({ invoiceId }: { invoiceId: string }) {
     const res = await fetch("/api/payments/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ invoiceId, method: "CASH" }),
+      body: JSON.stringify({ invoiceId, method }),
     });
     setLoading(false);
     if (res.ok) router.refresh();

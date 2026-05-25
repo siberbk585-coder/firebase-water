@@ -8,6 +8,14 @@ import {
 } from "@/lib/householdPeriod";
 import { HouseholdPeriodPanel } from "@/components/HouseholdPeriodPanel";
 import { householdStatusLabel } from "@/lib/vi";
+import { updateHouseholdPaymentMethod } from "../actions";
+import { DeleteHouseholdButton } from "./DeleteHouseholdButton";
+import { PaymentMethod } from "@prisma/client";
+
+const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  CASH: "Tiền mặt",
+  BANK_TRANSFER: "Chuyển khoản",
+};
 
 export default async function HouseholdDetailPage({
   params,
@@ -20,7 +28,7 @@ export default async function HouseholdDetailPage({
     prisma.household.findUnique({
       where: { id },
       include: {
-        priceGroup: true,
+        collectionRoute: { select: { name: true, unitPrice: true } },
         user: { select: { id: true, phone: true, name: true } },
         readings: { include: { period: true } },
         invoices: {
@@ -64,14 +72,21 @@ export default async function HouseholdDetailPage({
           </h1>
           <p className="text-sm text-[var(--muted)]">{household.address}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="badge bg-[var(--primary-soft)] text-[var(--primary-dark)]">
             Đồng hồ {household.meterCode}
           </span>
           <span className="badge bg-slate-100 text-slate-700">
             {householdStatusLabel(household.status)}
           </span>
-          <span className="badge bg-slate-100 text-slate-700">{household.priceGroup.name}</span>
+          {household.collectionRoute && (
+            <span className="badge bg-slate-100 text-slate-700">{household.collectionRoute.name}</span>
+          )}
+          <DeleteHouseholdButton
+            householdId={household.id}
+            householdCode={household.householdCode}
+            residentName={household.residentName}
+          />
         </div>
       </header>
 
@@ -105,10 +120,12 @@ export default async function HouseholdDetailPage({
         <div className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
           <InfoItem label="Mã hộ" value={household.householdCode} mono />
           <InfoItem label="Mã đồng hồ" value={household.meterCode} mono />
-          <InfoItem label="Nhóm giá" value={household.priceGroup.name} />
+          <InfoItem label="Khu vực" value={household.collectionRoute?.name ?? "—"} />
           <InfoItem
             label="Đơn giá"
-            value={`${household.priceGroup.unitPrice.toLocaleString("vi-VN")} đ/m³`}
+            value={household.collectionRoute?.unitPrice != null
+              ? `${household.collectionRoute.unitPrice.toLocaleString("vi-VN")} đ/m³`
+              : "—"}
           />
           <InfoItem label="Liên hệ" value={phone ?? "—"} />
           <InfoItem label="Tài khoản app" value={household.user?.phone ?? "Chưa gắn"} />
@@ -117,6 +134,25 @@ export default async function HouseholdDetailPage({
             value={household.createdAt.toLocaleDateString("vi-VN")}
           />
           <InfoItem label="Ghi chú" value={household.note?.trim() || "—"} className="sm:col-span-2" />
+          <div>
+            <p className="text-xs font-medium text-[var(--muted)]">Hình thức thu tiền</p>
+            <form
+              action={updateHouseholdPaymentMethod.bind(null, household.id)}
+              className="mt-1 flex items-center gap-2"
+            >
+              <select
+                name="paymentMethod"
+                defaultValue={household.paymentMethod}
+                className="input py-1 text-sm"
+              >
+                <option value="CASH">Tiền mặt</option>
+                <option value="BANK_TRANSFER">Chuyển khoản</option>
+              </select>
+              <button type="submit" className="btn btn-secondary py-1 text-xs">
+                Lưu
+              </button>
+            </form>
+          </div>
         </div>
       </section>
 

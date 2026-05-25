@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { exportReadingsCsv, pushToGoogleSheet } from "@/lib/sheetsExport";
 import { logAudit } from "@/lib/audit";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/types/enums";;
 
 export async function GET(request: Request) {
   const session = await getSession();

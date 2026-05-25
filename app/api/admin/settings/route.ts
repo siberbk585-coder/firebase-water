@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/types/enums";;
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { getSystemSettings, updateSystemSettings } from "@/lib/settings";

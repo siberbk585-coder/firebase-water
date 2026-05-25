@@ -1,10 +1,12 @@
 import bcrypt from "bcryptjs";
+import { createHmac } from "crypto";
 import { cookies } from "next/headers";
-import { UserRole } from "@prisma/client";
-import { prisma } from "./db";
+import { prisma } from "@/lib/data/prisma";
+import { UserRole } from "@/lib/types/enums";
 import { env } from "./env";
 
-const SESSION_COOKIE = "water_session";
+/** Firebase Hosting chỉ forward cookie `__session` tới Cloud Run (CDN). */
+const SESSION_COOKIE = "__session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
 export type SessionUser = {
@@ -29,7 +31,7 @@ function decodeSession(token: string): SessionUser | null {
 
 function sign(token: string): string {
   const secret = env.sessionSecret();
-  const sig = Buffer.from(`${token}.${secret}`).toString("base64url").slice(0, 32);
+  const sig = createHmac("sha256", secret).update(token).digest("base64url");
   return `${token}.${sig}`;
 }
 
@@ -50,15 +52,13 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export async function login(phone: string, password: string): Promise<SessionUser | null> {
-  const account = phone.trim();
-  const user = await prisma.user.findUnique({
-    where: { phone: account },
-    include: { household: true },
-  });
-  if (!user) return null;
-  const ok = await verifyPassword(password, user.passwordHash);
-  if (!ok) return null;
+export function toSessionUser(user: {
+  id: string;
+  phone: string;
+  name: string;
+  role: UserRole;
+  household?: { id: string } | null;
+}): SessionUser {
   return {
     id: user.id,
     phone: user.phone,
@@ -66,6 +66,19 @@ export async function login(phone: string, password: string): Promise<SessionUse
     role: user.role,
     householdId: user.household?.id,
   };
+}
+
+/** Đăng nhập legacy (bcrypt) — dùng khi chưa có tài khoản Firebase. */
+export async function login(phone: string, password: string): Promise<SessionUser | null> {
+  const account = phone.trim();
+  const user = await prisma.user.findUnique({
+    where: { phone: account },
+    include: { household: true },
+  });
+  if (!user?.passwordHash) return null;
+  const ok = await verifyPassword(password, user.passwordHash);
+  if (!ok) return null;
+  return toSessionUser(user);
 }
 
 export async function setSessionCookie(user: SessionUser): Promise<void> {
@@ -100,13 +113,7 @@ export async function getSession(): Promise<SessionUser | null> {
   });
   if (!user) return null;
 
-  return {
-    id: user.id,
-    phone: user.phone,
-    name: user.name,
-    role: user.role,
-    householdId: user.household?.id,
-  };
+  return toSessionUser(user);
 }
 
 export function requireRole(user: SessionUser | null, role: UserRole): boolean {

@@ -1,0 +1,68 @@
+# Queries — server dùng Admin SDK; client dùng USER + claim role
+
+query GetUserByPhone($phone: String!) @auth(level: NO_ACCESS) {
+  users(where: { phone: { eq: $phone } }, limit: 1) {
+    id
+    phone
+    firebaseUid
+    passwordHash
+    name
+    role
+    household_on_user {
+      id
+      householdCode
+    }
+  }
+}
+
+query GetUserById($id: UUID!) @auth(level: NO_ACCESS) {
+  user(id: $id) {
+    id
+    phone
+    firebaseUid
+    name
+    role
+    household_on_user {
+      id
+    }
+  }
+}
+
+query GetUserByFirebaseUid($uid: String!) @auth(level: NO_ACCESS) {
+  users(where: { firebaseUid: { eq: $uid } }, limit: 1) {
+    id
+    phone
+    firebaseUid
+    name
+    role
+    household_on_user {
+      id
+      householdCode
+      meterCode
+    }
+  }
+}
+
+query GetMe @auth(level: USER) {
+  users(where: { firebaseUid: { eq_expr: "auth.uid" } }, limit: 1) {
+    id
+    phone
+    name
+    role
+    household_on_user {
+      id
+      householdCode
+      meterCode
+    }
+  }
+}
+
+query ListUsers($limit: Int) @auth(expr: "auth.token.role == 'ADMIN'") {
+  users(limit: $limit, orderBy: [{ createdAt: DESC }]) {
+    id
+    phone
+    name
+    role
+    firebaseUid
+  }
+}

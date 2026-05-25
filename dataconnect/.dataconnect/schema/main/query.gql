@@ -1,0 +1,590 @@
+extend type Query {
+  """
+  ✨ Look up a single `AuditLog` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  auditLog(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: AuditLog_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: AuditLog_FirstRow
+  ): AuditLog @fdc_generated(from: "AuditLog", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `BillingPeriod` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  billingPeriod(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: BillingPeriod_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: BillingPeriod_FirstRow
+  ): BillingPeriod @fdc_generated(from: "BillingPeriod", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `CollectionRoute` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  collectionRoute(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: CollectionRoute_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: CollectionRoute_FirstRow
+  ): CollectionRoute @fdc_generated(from: "CollectionRoute", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Household` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  household(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Household_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Household_FirstRow
+  ): Household @fdc_generated(from: "Household", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Invoice` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  invoice(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Invoice_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Invoice_FirstRow
+  ): Invoice @fdc_generated(from: "Invoice", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `MeterReading` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  meterReading(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: MeterReading_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: MeterReading_FirstRow
+  ): MeterReading @fdc_generated(from: "MeterReading", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Notification` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  notification(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Notification_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Notification_FirstRow
+  ): Notification @fdc_generated(from: "Notification", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Payment` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  payment(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Payment_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Payment_FirstRow
+  ): Payment @fdc_generated(from: "Payment", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `PriceGroup` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  priceGroup(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: PriceGroup_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: PriceGroup_FirstRow
+  ): PriceGroup @fdc_generated(from: "PriceGroup", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `SystemSettings` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  systemSettings(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: SystemSettings_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: SystemSettings_FirstRow
+  ): SystemSettings @fdc_generated(from: "SystemSettings", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `User` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  user(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+  ): User @fdc_generated(from: "User", purpose: QUERY_SINGLE)
+  """
+  ✨ List `AuditLog` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  auditLogs(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: AuditLog_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [AuditLog_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: AuditLog_Having
+  ): [AuditLog!]! @fdc_generated(from: "AuditLog", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `BillingPeriod` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  billingPeriods(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: BillingPeriod_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [BillingPeriod_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: BillingPeriod_Having
+  ): [BillingPeriod!]! @fdc_generated(from: "BillingPeriod", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `CollectionRoute` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  collectionRoutes(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: CollectionRoute_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [CollectionRoute_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: CollectionRoute_Having
+  ): [CollectionRoute!]! @fdc_generated(from: "CollectionRoute", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Household` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  households(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Household_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Household_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Household_Having
+  ): [Household!]! @fdc_generated(from: "Household", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Invoice` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  invoices(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Invoice_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Invoice_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Invoice_Having
+  ): [Invoice!]! @fdc_generated(from: "Invoice", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `MeterReading` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  meterReadings(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: MeterReading_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [MeterReading_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: MeterReading_Having
+  ): [MeterReading!]! @fdc_generated(from: "MeterReading", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Notification` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  notifications(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Notification_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Notification_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Notification_Having
+  ): [Notification!]! @fdc_generated(from: "Notification", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Payment` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  payments(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Payment_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Payment_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Payment_Having
+  ): [Payment!]! @fdc_generated(from: "Payment", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `PriceGroup` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  priceGroups(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: PriceGroup_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [PriceGroup_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: PriceGroup_Having
+  ): [PriceGroup!]! @fdc_generated(from: "PriceGroup", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `SystemSettings` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  systemSettingss(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: SystemSettings_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [SystemSettings_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: SystemSettings_Having
+  ): [SystemSettings!]! @fdc_generated(from: "SystemSettings", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `User` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  users(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: User_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [User_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: User_Having
+  ): [User!]! @fdc_generated(from: "User", purpose: QUERY_MULTIPLE)
+}

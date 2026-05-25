@@ -21,6 +21,8 @@ npm-debug.log*
 .env
 .env.local
 .env.*.local
+.cloudsql-app-pass
+.tiennuoc-db-pass
 *.traineddata
 !.env.example
 
@@ -32,6 +34,11 @@ npm-debug.log*
 
 # vercel
 .vercel
+
+# firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
 
 # typescript
 *.tsbuildinfo

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { InvoiceStatus, ReadingStatus } from "@prisma/client";
+import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import { formatCurrency } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { getCurrentPeriodProgress } from "@/lib/routeProgress";

@@ -1,6 +1,43 @@
 import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { fetchPaymentQrImage } from "./paymentQr";
+
+const FONT_WEIGHTS = [500, 600, 700, 800, 900] as const;
+const FONT_BASE = join(
+  process.cwd(),
+  "node_modules/@fontsource/be-vietnam-pro/files"
+);
+
+function loadFontFaceCSS(): string {
+  const subsets = ["latin", "vietnamese"] as const;
+  const faces: string[] = [];
+  for (const subset of subsets) {
+    for (const weight of FONT_WEIGHTS) {
+      const path = join(
+        FONT_BASE,
+        `be-vietnam-pro-${subset}-${weight}-normal.woff`
+      );
+      let b64: string;
+      try {
+        b64 = readFileSync(path).toString("base64");
+      } catch {
+        continue;
+      }
+      faces.push(
+        `@font-face { font-family: 'BVP'; font-weight: ${weight}; font-style: normal; src: url('data:font/woff;base64,${b64}') format('woff'); unicode-range: ${subset === "vietnamese" ? "U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+1EA0-1EF9,U+20AB" : "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"}; }`
+      );
+    }
+  }
+  return faces.join("\n      ");
+}
+
+let _fontFaceCSS: string | null = null;
+function fontFaceCSS(): string {
+  if (!_fontFaceCSS) _fontFaceCSS = loadFontFaceCSS();
+  return _fontFaceCSS;
+}
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -111,7 +148,7 @@ function textLines({
   return wrapText(text, maxChars, maxLines)
     .map(
       (line, index) =>
-        `<text x="${x}" y="${y + index * lineHeight}" font-size="${size}" font-weight="${weight}" fill="${fill}">${escapeXml(line)}</text>`
+        `<text x="${x}" y="${y + index * lineHeight}" font-family="'BVP', Arial, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}">${escapeXml(line)}</text>`
     )
     .join("");
 }
@@ -149,14 +186,15 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
 <svg xmlns="http://www.w3.org/2000/svg" width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}">
   <defs>
     <style>
-      .font { font-family: Arial, Helvetica, sans-serif; }
-      .muted { fill: #64748b; }
-      .label { fill: #64748b; font-size: 22px; font-weight: 700; letter-spacing: .08em; }
-      .value { fill: #172033; font-size: 30px; font-weight: 700; }
-      .body { fill: #334155; font-size: 26px; font-weight: 500; }
-      .small { fill: #64748b; font-size: 20px; font-weight: 500; }
-      .tableHead { fill: #0f766e; font-size: 22px; font-weight: 800; letter-spacing: .04em; }
-      .tableCell { fill: #172033; font-size: 26px; font-weight: 600; }
+      ${fontFaceCSS()}
+      .font { font-family: 'BVP', Arial, sans-serif; }
+      .muted { fill: #64748b; font-family: 'BVP', Arial, sans-serif; }
+      .label { fill: #64748b; font-family: 'BVP', Arial, sans-serif; font-size: 22px; font-weight: 700; letter-spacing: .08em; }
+      .value { fill: #172033; font-family: 'BVP', Arial, sans-serif; font-size: 30px; font-weight: 700; }
+      .body { fill: #334155; font-family: 'BVP', Arial, sans-serif; font-size: 26px; font-weight: 500; }
+      .small { fill: #64748b; font-family: 'BVP', Arial, sans-serif; font-size: 20px; font-weight: 500; }
+      .tableHead { fill: #0f766e; font-family: 'BVP', Arial, sans-serif; font-size: 22px; font-weight: 800; letter-spacing: .04em; }
+      .tableCell { fill: #172033; font-family: 'BVP', Arial, sans-serif; font-size: 26px; font-weight: 600; }
     </style>
   </defs>
 

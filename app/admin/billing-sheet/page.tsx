@@ -12,7 +12,7 @@ import { BillingPeriodSelect } from "@/components/BillingPeriodSelect";
 import { BillingRouteSelect } from "@/components/BillingRouteSelect";
 import { BillingExcelPanel } from "@/components/BillingExcelPanel";
 import { formatPeriod } from "@/lib/vi";
-import { ReadingStatus } from "@prisma/client";
+import { ReadingStatus } from "@/lib/types/enums";;
 
 export default async function BillingSheetPage({
   searchParams,
@@ -136,82 +136,69 @@ export default async function BillingSheetPage({
         </div>
       )}
 
-      <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        {!isSummary && (
-          <form
-            method="get"
-            className="flex w-full shrink-0 items-end gap-2 lg:w-56 lg:flex-col lg:items-stretch xl:w-64"
-          >
-            <input type="hidden" name="period" value={activePeriod.id} />
-            <input type="hidden" name="route" value={routeQuery} />
-            {statusFilter !== "all" && (
-              <input type="hidden" name="status" value={statusFilter} />
-            )}
-            <label className="label mb-0 hidden text-xs lg:block">Tìm hộ</label>
-            <input
-              name="q"
-              defaultValue={searchQuery ?? ""}
-              placeholder="MKH, đồng hồ, tên…"
-              className="input w-full py-1.5 text-sm"
-              aria-label="Tìm mã hộ, đồng hồ, tên"
-            />
-            <div className="flex gap-1">
-              <button type="submit" className="btn btn-secondary flex-1 py-1.5 text-xs">
-                Tìm
-              </button>
-              {query && (
-                <Link
-                  href={clearSearchHref}
-                  className="btn btn-secondary px-2 py-1.5 text-xs"
-                  title="Xóa lọc"
-                >
-                  ×
-                </Link>
-              )}
-            </div>
-          </form>
-        )}
+      {/* Hàng 1: Tiêu đề */}
+      <div className="mb-2">
+        <h1 className="text-xl font-bold sm:text-2xl">Bảng thu nước</h1>
+        <p className="text-sm text-[var(--muted)]">
+          Kỳ <strong>{periodLabel}</strong>
+          {isAll
+            ? " — tất cả hộ"
+            : isSummary
+              ? " — tổng theo khu vực"
+              : activeRoute
+                ? ` — ${activeRoute.name}`
+                : ""}
+          {!isSummary && query && (
+            <span>
+              {" "}
+              · hiển thị <strong>{filteredRows.length}</strong>/
+              {rows.length} hộ
+            </span>
+          )}
+        </p>
+      </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:gap-3">
-          <div>
-            <h1 className="text-xl font-bold sm:text-2xl">Bảng thu nước</h1>
-            <p className="text-sm text-[var(--muted)]">
-              Kỳ <strong>{periodLabel}</strong>
-              {isAll
-                ? " — tất cả hộ"
-                : isSummary
-                  ? " — tổng theo khu vực"
-                  : activeRoute
-                    ? ` — ${activeRoute.name}`
-                    : ""}
-              {!isSummary && query && (
-                <span>
-                  {" "}
-                  · hiển thị <strong>{filteredRows.length}</strong>/
-                  {rows.length} hộ
-                </span>
+      {/* Hàng 2: Bộ lọc + Excel + Đóng kỳ */}
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <div className="flex flex-wrap items-end gap-2">
+          <Suspense fallback={null}>
+            <BillingPeriodSelect
+              periods={periods.map((p) => ({
+                id: p.id,
+                label: `${formatPeriod(p.month, p.year)}${p.status === "OPEN" ? " (đang thu)" : ""}`,
+              }))}
+              activePeriodId={activePeriod.id}
+              routeId={isSummary ? undefined : routeQuery}
+              isSummary={isSummary}
+            />
+            <BillingRouteSelect
+              periodId={activePeriod.id}
+              routes={routes.map((r) => ({ id: r.id, name: r.name }))}
+              activeRouteId={isAll ? null : activeRoute?.id ?? null}
+              isSummary={isSummary}
+            />
+          </Suspense>
+          {!isSummary && (
+            <form method="get" className="flex items-end gap-1">
+              <input type="hidden" name="period" value={activePeriod.id} />
+              <input type="hidden" name="route" value={routeQuery} />
+              {statusFilter !== "all" && (
+                <input type="hidden" name="status" value={statusFilter} />
               )}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Suspense fallback={<span className="text-sm">Đang tải…</span>}>
-              <BillingPeriodSelect
-                periods={periods.map((p) => ({
-                  id: p.id,
-                  label: `${formatPeriod(p.month, p.year)}${p.status === "OPEN" ? " (đang thu)" : ""}`,
-                }))}
-                activePeriodId={activePeriod.id}
-                routeId={isSummary ? undefined : routeQuery}
-                isSummary={isSummary}
+              <input
+                name="q"
+                defaultValue={searchQuery ?? ""}
+                placeholder="Tìm MKH, đồng hồ, tên…"
+                className="input py-1.5 text-sm"
+                style={{ width: "200px" }}
+                aria-label="Tìm mã hộ, đồng hồ, tên"
               />
-              <BillingRouteSelect
-                periodId={activePeriod.id}
-                routes={routes.map((r) => ({ id: r.id, name: r.name }))}
-                activeRouteId={isAll ? null : activeRoute?.id ?? null}
-                isSummary={isSummary}
-              />
-            </Suspense>
-          </div>
+              <button type="submit" className="btn btn-secondary py-1.5 text-xs">Tìm</button>
+              {query && (
+                <Link href={clearSearchHref} className="btn btn-secondary px-2 py-1.5 text-xs" title="Xóa lọc">×</Link>
+              )}
+            </form>
+          )}
         </div>
         <BillingExcelPanel periodId={activePeriod.id} />
       </div>

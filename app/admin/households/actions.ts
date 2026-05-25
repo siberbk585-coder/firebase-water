@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { Prisma, UserRole } from "@prisma/client";
+import { Prisma, PaymentMethod, UserRole, InvoiceStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/guards";
@@ -28,35 +28,34 @@ export async function createHousehold(formData: FormData): Promise<void> {
   const residentName = String(formData.get("residentName") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const contactPhone = String(formData.get("contactPhone") ?? "").trim();
-  const priceGroupId = String(formData.get("priceGroupId") ?? "").trim();
   const collectionRouteId = String(formData.get("collectionRouteId") ?? "").trim();
-  const routeSortOrderRaw = String(formData.get("routeSortOrder") ?? "").trim();
   const appPhone = String(formData.get("appPhone") ?? "").trim();
   const appPassword = String(formData.get("appPassword") ?? "").trim();
 
-  if (!householdCode || !meterCode || !residentName || !address || !priceGroupId) {
+  if (!householdCode || !meterCode || !residentName || !address || !collectionRouteId) {
     redirect(
       householdsListUrl({
-        error: "Điền đủ mã hộ, mã đồng hồ, tên chủ hộ, địa chỉ và nhóm giá.",
+        error: "Điền đủ mã hộ, mã đồng hồ, tên chủ hộ, địa chỉ và khu vực.",
       })
     );
   }
 
-  const priceGroup = await prisma.priceGroup.findUnique({
-    where: { id: priceGroupId },
-  });
-  if (!priceGroup) {
-    redirect(householdsListUrl({ error: "Nhóm giá không hợp lệ." }));
+  const route = await prisma.collectionRoute.findUnique({ where: { id: collectionRouteId } });
+  if (!route) {
+    redirect(householdsListUrl({ error: "Khu vực không hợp lệ." }));
   }
 
-  if (collectionRouteId) {
-    const route = await prisma.collectionRoute.findUnique({
-      where: { id: collectionRouteId },
-    });
-    if (!route) {
-      redirect(householdsListUrl({ error: "Khu vực không hợp lệ." }));
-    }
+  const maxSortOrder = await prisma.household.aggregate({
+    where: { collectionRouteId },
+    _max: { routeSortOrder: true },
+  });
+  const nextSortOrder = (maxSortOrder._max.routeSortOrder ?? 0) + 1;
+
+  const priceGroup = await prisma.priceGroup.findFirst({ orderBy: { code: "asc" } });
+  if (!priceGroup) {
+    redirect(householdsListUrl({ error: "Chưa có nhóm giá mặc định trong hệ thống." }));
   }
+  const priceGroupId = priceGroup.id;
 
   let userId: string | undefined;
   if (appPhone) {
@@ -94,9 +93,10 @@ export async function createHousehold(formData: FormData): Promise<void> {
     }
   }
 
-  const routeSortOrder = routeSortOrderRaw
-    ? parseInt(routeSortOrderRaw, 10)
-    : undefined;
+  const currentPeriod = await prisma.billingPeriod.findFirst({
+    where: { status: "OPEN" },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+  });
 
   try {
     const household = await prisma.household.create({
@@ -107,16 +107,26 @@ export async function createHousehold(formData: FormData): Promise<void> {
         address,
         contactPhone: contactPhone || appPhone || null,
         priceGroupId,
-        collectionRouteId: collectionRouteId || null,
-        routeSortOrder:
-          collectionRouteId &&
-          routeSortOrder != null &&
-          !Number.isNaN(routeSortOrder)
-            ? routeSortOrder
-            : null,
+        collectionRouteId,
+        routeSortOrder: nextSortOrder,
         userId,
       },
     });
+
+    if (currentPeriod) {
+      await prisma.meterReading.create({
+        data: {
+          householdId: household.id,
+          periodId: currentPeriod.id,
+          oldReading: 0,
+          confirmedValue: 0,
+          usageM3: 0,
+          inputMethod: "MANUAL",
+          status: "CONFIRMED",
+          confirmedAt: new Date(),
+        },
+      });
+    }
 
     await logAudit({
       actorId: admin.id,
@@ -141,4 +151,69 @@ export async function createHousehold(formData: FormData): Promise<void> {
     }
     throw e;
   }
+}
+
+export async function updateHouseholdPaymentMethod(
+  householdId: string,
+  formData: FormData
+): Promise<void> {
+  const admin = await requireAdmin();
+  const raw = String(formData.get("paymentMethod") ?? "").trim();
+  if (raw !== PaymentMethod.CASH && raw !== PaymentMethod.BANK_TRANSFER) {
+    return;
+  }
+  await prisma.household.update({
+    where: { id: householdId },
+    data: { paymentMethod: raw },
+  });
+  await logAudit({
+    actorId: admin.id,
+    action: "HOUSEHOLD_PAYMENT_METHOD_UPDATED",
+    entity: "Household",
+    entityId: householdId,
+    metadata: { paymentMethod: raw },
+  });
+  revalidatePath(`/admin/households/${householdId}`);
+  revalidatePath("/admin/payments");
+}
+
+export async function deleteHousehold(
+  householdId: string
+): Promise<{ error: string } | void> {
+  const admin = await requireAdmin();
+
+  const household = await prisma.household.findUniqueOrThrow({
+    where: { id: householdId },
+    select: { householdCode: true, meterCode: true, userId: true },
+  });
+
+  const paidCount = await prisma.invoice.count({
+    where: { householdId, status: InvoiceStatus.PAID },
+  });
+  if (paidCount > 0) {
+    return {
+      error: `Không thể xóa — hộ này có ${paidCount} hóa đơn đã thu tiền. Liên hệ quản trị viên để xử lý.`,
+    };
+  }
+
+  await prisma.$transaction([
+    prisma.notification.deleteMany({ where: { householdId } }),
+    prisma.invoiceSendLog.deleteMany({ where: { invoice: { householdId } } }),
+    prisma.payment.deleteMany({ where: { invoice: { householdId } } }),
+    prisma.invoice.deleteMany({ where: { householdId } }),
+    prisma.meterReading.deleteMany({ where: { householdId } }),
+    prisma.household.delete({ where: { id: householdId } }),
+  ]);
+
+  await logAudit({
+    actorId: admin.id,
+    action: "HOUSEHOLD_DELETED",
+    entity: "Household",
+    entityId: householdId,
+    metadata: { householdCode: household.householdCode, meterCode: household.meterCode },
+  });
+
+  revalidatePath("/admin/households");
+  revalidatePath("/admin/billing-sheet");
+  redirect("/admin/households");
 }

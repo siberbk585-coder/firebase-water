@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { UserRole } from "@/lib/types/enums";;
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { approveReading } from "@/lib/readings";
@@ -36,6 +37,8 @@ export async function POST(request: Request) {
       (reading.confirmedValue != null
         ? Math.max(0, reading.confirmedValue - reading.oldReading)
         : null);
+    revalidatePath("/admin/billing-sheet");
+    revalidatePath("/admin/dashboard");
     return NextResponse.json({
       ok: true,
       reading: {

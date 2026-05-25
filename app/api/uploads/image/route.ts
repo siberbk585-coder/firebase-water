@@ -6,7 +6,9 @@ export const runtime = "nodejs";
 
 function checkApiKey(request: Request): boolean {
   const expected = process.env.UPLOAD_API_KEY?.trim();
-  if (!expected) return true;
+  if (!expected) {
+    return process.env.NODE_ENV !== "production";
+  }
   const auth = request.headers.get("authorization");
   const bearer = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
   const headerKey = request.headers.get("x-api-key");

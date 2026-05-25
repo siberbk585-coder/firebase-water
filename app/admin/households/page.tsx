@@ -25,14 +25,13 @@ export default async function AdminHouseholdsPage({
       }
     : undefined;
 
-  const [households, total, routes, priceGroups] = await Promise.all([
+  const [households, total, routes] = await Promise.all([
     prisma.household.findMany({
       where,
       skip,
       take: pageSize,
       orderBy: { householdCode: "asc" },
       include: {
-        priceGroup: true,
         user: { select: { phone: true } },
         readings: {
           include: { period: true },
@@ -44,10 +43,6 @@ export default async function AdminHouseholdsPage({
     prisma.collectionRoute.findMany({
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true },
-    }),
-    prisma.priceGroup.findMany({
-      orderBy: { code: "asc" },
-      select: { id: true, name: true, code: true },
     }),
   ]);
 
@@ -63,7 +58,7 @@ export default async function AdminHouseholdsPage({
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <AddHouseholdModal routes={routes} priceGroups={priceGroups} />
+          <AddHouseholdModal routes={routes} />
           <form className="flex gap-2" method="get">
             <input
               name="q"

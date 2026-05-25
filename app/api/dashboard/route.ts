@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { ReadingStatus, InvoiceStatus, UserRole } from "@prisma/client";
+import { ReadingStatus, InvoiceStatus, UserRole } from "@/lib/types/enums";;
 
 export async function GET() {
   const session = await getSession();

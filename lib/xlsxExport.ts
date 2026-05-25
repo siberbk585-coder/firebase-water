@@ -1,4 +1,4 @@
-import type { InputMethod, ReadingStatus } from "@prisma/client";
+import type { InputMethod, ReadingStatus } from "@/lib/types/enums";
 import * as XLSX from "xlsx-js-style";
 import { parseAnomalyFlags } from "./anomaly";
 import { loadBillingSheetRows, loadRouteSummaries } from "./billingSheet";

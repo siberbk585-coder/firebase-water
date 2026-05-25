@@ -1,0 +1,12 @@
+specVersion: "v1"
+serviceId: "tiennuoc-water"
+location: "asia-southeast1"
+schemaValidation: "COMPATIBLE"
+schemas:
+  - source: "./schema"
+    datasource:
+      postgresql:
+        database: "tiennuoc_water"
+        cloudSql:
+          instanceId: "tiennuoc-db"
+connectorDirs: ["./connector"]

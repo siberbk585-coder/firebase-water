@@ -1,15 +1,11 @@
 import fs from "fs/promises";
 import path from "path";
 import { env } from "./env";
-
-/** Vercel/Lambda: chỉ `/tmp` ghi được; local dev: thư mục project. */
-function isServerlessFs(): boolean {
-  return process.env.VERCEL === "1" || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
-}
+import { isServerlessRuntime } from "./runtime";
 
 function storageRoot(): string {
   const configured = env.storageDir().replace(/^\/+/, "");
-  if (isServerlessFs()) {
+  if (isServerlessRuntime()) {
     if (configured.startsWith("tmp/") || configured === "tmp") {
       return path.join("/tmp", configured === "tmp" ? "firebase-water-storage" : configured.slice(4));
     }

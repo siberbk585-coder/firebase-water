@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { UserRole } from "@/lib/types/enums";;
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { adminUpsertReading } from "@/lib/readings";
@@ -28,7 +29,6 @@ export async function POST(request: Request) {
 
   const household = await prisma.household.findUnique({
     where: { id: householdId },
-    include: { priceGroup: true },
   });
   if (!household) {
     return NextResponse.json({ error: "Không tìm thấy hộ" }, { status: 404 });
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     });
     const usageM3 = reading.usageM3 ?? calculateUsage(confirmedValue, reading.oldReading);
     const invoice = await syncInvoiceForConfirmedReading(householdId, periodId);
+    revalidatePath("/admin/billing-sheet");
     return NextResponse.json({
       ok: true,
       reading: {

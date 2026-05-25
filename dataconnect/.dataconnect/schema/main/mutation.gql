@@ -1,0 +1,1244 @@
+extend type Mutation {
+  """
+  ✨ Insert a single `AuditLog` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  auditLog_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: AuditLog_Data!
+  ): AuditLog_KeyOutput! @fdc_generated(from: "AuditLog", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `BillingPeriod` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  billingPeriod_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: BillingPeriod_Data!
+  ): BillingPeriod_KeyOutput! @fdc_generated(from: "BillingPeriod", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `CollectionRoute` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  collectionRoute_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: CollectionRoute_Data!
+  ): CollectionRoute_KeyOutput! @fdc_generated(from: "CollectionRoute", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Household` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  household_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Household_Data!
+  ): Household_KeyOutput! @fdc_generated(from: "Household", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Invoice` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  invoice_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Invoice_Data!
+  ): Invoice_KeyOutput! @fdc_generated(from: "Invoice", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `MeterReading` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  meterReading_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: MeterReading_Data!
+  ): MeterReading_KeyOutput! @fdc_generated(from: "MeterReading", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Notification` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  notification_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Notification_Data!
+  ): Notification_KeyOutput! @fdc_generated(from: "Notification", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Payment` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  payment_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Payment_Data!
+  ): Payment_KeyOutput! @fdc_generated(from: "Payment", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `PriceGroup` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  priceGroup_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: PriceGroup_Data!
+  ): PriceGroup_KeyOutput! @fdc_generated(from: "PriceGroup", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `SystemSettings` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  systemSettings_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: SystemSettings_Data!
+  ): SystemSettings_KeyOutput! @fdc_generated(from: "SystemSettings", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `User` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  user_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: User_Data!
+  ): User_KeyOutput! @fdc_generated(from: "User", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert `AuditLog` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  auditLog_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [AuditLog_Data!]!
+  ): [AuditLog_KeyOutput!]! @fdc_generated(from: "AuditLog", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `BillingPeriod` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  billingPeriod_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [BillingPeriod_Data!]!
+  ): [BillingPeriod_KeyOutput!]! @fdc_generated(from: "BillingPeriod", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `CollectionRoute` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  collectionRoute_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [CollectionRoute_Data!]!
+  ): [CollectionRoute_KeyOutput!]! @fdc_generated(from: "CollectionRoute", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Household` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  household_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Household_Data!]!
+  ): [Household_KeyOutput!]! @fdc_generated(from: "Household", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Invoice` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  invoice_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Invoice_Data!]!
+  ): [Invoice_KeyOutput!]! @fdc_generated(from: "Invoice", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `MeterReading` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  meterReading_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [MeterReading_Data!]!
+  ): [MeterReading_KeyOutput!]! @fdc_generated(from: "MeterReading", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Notification` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  notification_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Notification_Data!]!
+  ): [Notification_KeyOutput!]! @fdc_generated(from: "Notification", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Payment` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  payment_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Payment_Data!]!
+  ): [Payment_KeyOutput!]! @fdc_generated(from: "Payment", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `PriceGroup` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  priceGroup_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [PriceGroup_Data!]!
+  ): [PriceGroup_KeyOutput!]! @fdc_generated(from: "PriceGroup", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `SystemSettings` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  systemSettings_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [SystemSettings_Data!]!
+  ): [SystemSettings_KeyOutput!]! @fdc_generated(from: "SystemSettings", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `User` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  user_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [User_Data!]!
+  ): [User_KeyOutput!]! @fdc_generated(from: "User", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert or update a single `AuditLog` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `AuditLog`.
+  """
+  auditLog_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: AuditLog_Data!
+  ): AuditLog_KeyOutput! @fdc_generated(from: "AuditLog", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `BillingPeriod` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `BillingPeriod`.
+  """
+  billingPeriod_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: BillingPeriod_Data!
+  ): BillingPeriod_KeyOutput! @fdc_generated(from: "BillingPeriod", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `CollectionRoute` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `CollectionRoute`.
+  """
+  collectionRoute_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: CollectionRoute_Data!
+  ): CollectionRoute_KeyOutput! @fdc_generated(from: "CollectionRoute", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Household` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Household`.
+  """
+  household_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Household_Data!
+  ): Household_KeyOutput! @fdc_generated(from: "Household", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Invoice` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Invoice`.
+  """
+  invoice_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Invoice_Data!
+  ): Invoice_KeyOutput! @fdc_generated(from: "Invoice", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `MeterReading` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `MeterReading`.
+  """
+  meterReading_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: MeterReading_Data!
+  ): MeterReading_KeyOutput! @fdc_generated(from: "MeterReading", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Notification` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Notification`.
+  """
+  notification_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Notification_Data!
+  ): Notification_KeyOutput! @fdc_generated(from: "Notification", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Payment` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Payment`.
+  """
+  payment_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Payment_Data!
+  ): Payment_KeyOutput! @fdc_generated(from: "Payment", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `PriceGroup` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `PriceGroup`.
+  """
+  priceGroup_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: PriceGroup_Data!
+  ): PriceGroup_KeyOutput! @fdc_generated(from: "PriceGroup", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `SystemSettings` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `SystemSettings`.
+  """
+  systemSettings_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: SystemSettings_Data!
+  ): SystemSettings_KeyOutput! @fdc_generated(from: "SystemSettings", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `User` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `User`.
+  """
+  user_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: User_Data!
+  ): User_KeyOutput! @fdc_generated(from: "User", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update `AuditLog` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `AuditLog`.
+  """
+  auditLog_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [AuditLog_Data!]!
+  ): [AuditLog_KeyOutput!]! @fdc_generated(from: "AuditLog", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `BillingPeriod` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `BillingPeriod`.
+  """
+  billingPeriod_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [BillingPeriod_Data!]!
+  ): [BillingPeriod_KeyOutput!]! @fdc_generated(from: "BillingPeriod", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `CollectionRoute` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `CollectionRoute`.
+  """
+  collectionRoute_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [CollectionRoute_Data!]!
+  ): [CollectionRoute_KeyOutput!]! @fdc_generated(from: "CollectionRoute", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Household` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Household`.
+  """
+  household_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Household_Data!]!
+  ): [Household_KeyOutput!]! @fdc_generated(from: "Household", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Invoice` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Invoice`.
+  """
+  invoice_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Invoice_Data!]!
+  ): [Invoice_KeyOutput!]! @fdc_generated(from: "Invoice", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `MeterReading` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `MeterReading`.
+  """
+  meterReading_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [MeterReading_Data!]!
+  ): [MeterReading_KeyOutput!]! @fdc_generated(from: "MeterReading", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Notification` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Notification`.
+  """
+  notification_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Notification_Data!]!
+  ): [Notification_KeyOutput!]! @fdc_generated(from: "Notification", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Payment` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Payment`.
+  """
+  payment_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Payment_Data!]!
+  ): [Payment_KeyOutput!]! @fdc_generated(from: "Payment", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `PriceGroup` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `PriceGroup`.
+  """
+  priceGroup_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [PriceGroup_Data!]!
+  ): [PriceGroup_KeyOutput!]! @fdc_generated(from: "PriceGroup", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `SystemSettings` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `SystemSettings`.
+  """
+  systemSettings_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [SystemSettings_Data!]!
+  ): [SystemSettings_KeyOutput!]! @fdc_generated(from: "SystemSettings", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `User` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `User`.
+  """
+  user_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [User_Data!]!
+  ): [User_KeyOutput!]! @fdc_generated(from: "User", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Update a single `AuditLog` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `AuditLog` or `null` if not found.
+  """
+  auditLog_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: AuditLog_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: AuditLog_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: AuditLog_Data!
+  ): AuditLog_KeyOutput @fdc_generated(from: "AuditLog", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `BillingPeriod` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `BillingPeriod` or `null` if not found.
+  """
+  billingPeriod_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: BillingPeriod_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: BillingPeriod_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: BillingPeriod_Data!
+  ): BillingPeriod_KeyOutput @fdc_generated(from: "BillingPeriod", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `CollectionRoute` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `CollectionRoute` or `null` if not found.
+  """
+  collectionRoute_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: CollectionRoute_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: CollectionRoute_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: CollectionRoute_Data!
+  ): CollectionRoute_KeyOutput @fdc_generated(from: "CollectionRoute", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Household` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Household` or `null` if not found.
+  """
+  household_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Household_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Household_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Household_Data!
+  ): Household_KeyOutput @fdc_generated(from: "Household", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Invoice` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Invoice` or `null` if not found.
+  """
+  invoice_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Invoice_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Invoice_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Invoice_Data!
+  ): Invoice_KeyOutput @fdc_generated(from: "Invoice", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `MeterReading` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `MeterReading` or `null` if not found.
+  """
+  meterReading_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: MeterReading_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: MeterReading_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: MeterReading_Data!
+  ): MeterReading_KeyOutput @fdc_generated(from: "MeterReading", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Notification` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Notification` or `null` if not found.
+  """
+  notification_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Notification_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Notification_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Notification_Data!
+  ): Notification_KeyOutput @fdc_generated(from: "Notification", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Payment` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Payment` or `null` if not found.
+  """
+  payment_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Payment_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Payment_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Payment_Data!
+  ): Payment_KeyOutput @fdc_generated(from: "Payment", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `PriceGroup` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `PriceGroup` or `null` if not found.
+  """
+  priceGroup_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: PriceGroup_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: PriceGroup_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: PriceGroup_Data!
+  ): PriceGroup_KeyOutput @fdc_generated(from: "PriceGroup", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `SystemSettings` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `SystemSettings` or `null` if not found.
+  """
+  systemSettings_update(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: SystemSettings_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: SystemSettings_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: SystemSettings_Data!
+  ): SystemSettings_KeyOutput @fdc_generated(from: "SystemSettings", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `User` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `User` or `null` if not found.
+  """
+  user_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: User_Data!
+  ): User_KeyOutput @fdc_generated(from: "User", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update `AuditLog` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  auditLog_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: AuditLog_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: AuditLog_Data!
+  ): Int! @fdc_generated(from: "AuditLog", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `BillingPeriod` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  billingPeriod_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: BillingPeriod_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: BillingPeriod_Data!
+  ): Int! @fdc_generated(from: "BillingPeriod", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `CollectionRoute` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  collectionRoute_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: CollectionRoute_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: CollectionRoute_Data!
+  ): Int! @fdc_generated(from: "CollectionRoute", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Household` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  household_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Household_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Household_Data!
+  ): Int! @fdc_generated(from: "Household", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Invoice` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  invoice_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Invoice_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Invoice_Data!
+  ): Int! @fdc_generated(from: "Invoice", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `MeterReading` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  meterReading_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: MeterReading_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: MeterReading_Data!
+  ): Int! @fdc_generated(from: "MeterReading", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Notification` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  notification_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Notification_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Notification_Data!
+  ): Int! @fdc_generated(from: "Notification", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Payment` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  payment_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Payment_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Payment_Data!
+  ): Int! @fdc_generated(from: "Payment", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `PriceGroup` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  priceGroup_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: PriceGroup_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: PriceGroup_Data!
+  ): Int! @fdc_generated(from: "PriceGroup", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `SystemSettings` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  systemSettings_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: SystemSettings_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: SystemSettings_Data!
+  ): Int! @fdc_generated(from: "SystemSettings", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `User` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  user_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: User_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: User_Data!
+  ): Int! @fdc_generated(from: "User", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Delete a single `AuditLog` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  auditLog_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: AuditLog_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: AuditLog_FirstRow
+  ): AuditLog_KeyOutput @fdc_generated(from: "AuditLog", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `BillingPeriod` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  billingPeriod_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: BillingPeriod_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: BillingPeriod_FirstRow
+  ): BillingPeriod_KeyOutput @fdc_generated(from: "BillingPeriod", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `CollectionRoute` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  collectionRoute_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: CollectionRoute_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: CollectionRoute_FirstRow
+  ): CollectionRoute_KeyOutput @fdc_generated(from: "CollectionRoute", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Household` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  household_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Household_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Household_FirstRow
+  ): Household_KeyOutput @fdc_generated(from: "Household", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Invoice` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  invoice_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Invoice_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Invoice_FirstRow
+  ): Invoice_KeyOutput @fdc_generated(from: "Invoice", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `MeterReading` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  meterReading_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: MeterReading_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: MeterReading_FirstRow
+  ): MeterReading_KeyOutput @fdc_generated(from: "MeterReading", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Notification` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  notification_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Notification_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Notification_FirstRow
+  ): Notification_KeyOutput @fdc_generated(from: "Notification", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Payment` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  payment_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Payment_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Payment_FirstRow
+  ): Payment_KeyOutput @fdc_generated(from: "Payment", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `PriceGroup` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  priceGroup_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: PriceGroup_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: PriceGroup_FirstRow
+  ): PriceGroup_KeyOutput @fdc_generated(from: "PriceGroup", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `SystemSettings` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  systemSettings_delete(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: SystemSettings_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: SystemSettings_FirstRow
+  ): SystemSettings_KeyOutput @fdc_generated(from: "SystemSettings", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `User` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  user_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+  ): User_KeyOutput @fdc_generated(from: "User", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete `AuditLog` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  auditLog_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: AuditLog_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "AuditLog", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `BillingPeriod` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  billingPeriod_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: BillingPeriod_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "BillingPeriod", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `CollectionRoute` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  collectionRoute_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: CollectionRoute_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "CollectionRoute", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Household` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  household_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Household_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Household", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Invoice` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  invoice_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Invoice_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Invoice", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `MeterReading` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  meterReading_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: MeterReading_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "MeterReading", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Notification` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  notification_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Notification_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Notification", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Payment` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  payment_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Payment_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Payment", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `PriceGroup` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  priceGroup_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: PriceGroup_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "PriceGroup", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `SystemSettings` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  systemSettings_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: SystemSettings_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "SystemSettings", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `User` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  user_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: User_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "User", purpose: DELETE_MULTIPLE)
+}

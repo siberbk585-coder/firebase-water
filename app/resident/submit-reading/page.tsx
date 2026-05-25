@@ -4,7 +4,7 @@ import { getOldReading, readingLastUpdatedAt } from "@/lib/readings";
 import { canResidentSubmitForPeriod } from "@/lib/settings";
 import { SubmitReadingClient } from "./SubmitReadingClient";
 import { formatPeriod, readingStatusLabel } from "@/lib/vi";
-import { ReadingStatus } from "@prisma/client";
+import { ReadingStatus } from "@/lib/types/enums";;
 
 export default async function SubmitReadingPage() {
   const user = await requireResident();

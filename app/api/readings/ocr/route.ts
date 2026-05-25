@@ -4,7 +4,7 @@ import { runOcrOnImage, needsManualEntry } from "@/lib/ocr";
 import { saveBuffer } from "@/lib/storage";
 import { prisma } from "@/lib/db";
 import { getOldReading } from "@/lib/readings";
-import { ReadingStatus } from "@prisma/client";
+import { ReadingStatus } from "@/lib/types/enums";;
 import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";

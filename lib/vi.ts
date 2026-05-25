@@ -2,9 +2,10 @@ import type {
   HouseholdStatus,
   InvoiceStatus,
   InputMethod,
+  PeriodStatus,
   ReadingStatus,
   UserRole,
-} from "@prisma/client";
+} from "@/lib/types/enums";
 import type { AnomalyCode } from "./anomaly";
 
 export const appTitle = "Thu tiền nước";
@@ -28,8 +29,8 @@ export function formatPeriod(month: number, year: number): string {
   return `Tháng ${month}/${year}`;
 }
 
-export function readingStatusLabel(status: ReadingStatus): string {
-  const map: Record<ReadingStatus, string> = {
+export function readingStatusLabel(status: ReadingStatus | string): string {
+  const map: Record<string, string> = {
     PENDING: "Chờ xử lý",
     CONFIRMED: "Đã xác nhận",
     REJECTED: "Từ chối",
@@ -37,8 +38,8 @@ export function readingStatusLabel(status: ReadingStatus): string {
   return map[status];
 }
 
-export function invoiceStatusLabel(status: InvoiceStatus): string {
-  const map: Record<InvoiceStatus, string> = {
+export function invoiceStatusLabel(status: InvoiceStatus | string): string {
+  const map: Record<string, string> = {
     DRAFT: "Nháp",
     ISSUED: "Chưa thanh toán",
     PAID: "Đã thanh toán",
@@ -47,8 +48,8 @@ export function invoiceStatusLabel(status: InvoiceStatus): string {
   return map[status];
 }
 
-export function inputMethodLabel(method: InputMethod): string {
-  const map: Record<InputMethod, string> = {
+export function inputMethodLabel(method: InputMethod | string): string {
+  const map: Record<string, string> = {
     OCR_CONFIRMED: "Xác nhận OCR",
     OCR_EDITED: "Sửa sau OCR",
     MANUAL: "Nhập tay",
@@ -66,15 +67,15 @@ export function anomalyLabel(code: AnomalyCode): string {
   return map[code];
 }
 
-export function userRoleLabel(role: UserRole): string {
+export function userRoleLabel(role: UserRole | string): string {
   return role === "ADMIN" ? "Quản trị" : "Hộ dân";
 }
 
-export function householdStatusLabel(status: HouseholdStatus): string {
+export function householdStatusLabel(status: HouseholdStatus | string): string {
   return status === "ACTIVE" ? "Đang sử dụng" : "Ngừng";
 }
 
-export function periodStatusLabel(status: import("@prisma/client").PeriodStatus): string {
+export function periodStatusLabel(status: PeriodStatus | string): string {
   return status === "OPEN" ? "Đang mở" : "Đã đóng";
 }
 

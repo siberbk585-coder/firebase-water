@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { confirmReading } from "@/lib/readings";
-import { InputMethod } from "@prisma/client";
+import { InputMethod } from "@/lib/types/enums";;
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 

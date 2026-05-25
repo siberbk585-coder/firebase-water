@@ -1,13 +1,9 @@
-import {
-  InputMethod,
-  InvoiceStatus,
-  Prisma,
-  ReadingStatus,
-} from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { InputMethod, InvoiceStatus, ReadingStatus } from "@/lib/types/enums";
 import * as XLSX from "xlsx-js-style";
 import { calculateUsage } from "./billing";
 import { logAudit } from "./audit";
-import { prisma } from "./db";
+import { prisma } from "@/lib/data/prisma";
 
 type ImportRow = Record<string, unknown>;
 

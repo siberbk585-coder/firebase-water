@@ -1,0 +1,8 @@
+connectorId: tiennuoc
+generate:
+  javascriptSdk:
+    outputDir: "../../lib/generated/dataconnect"
+    package: "@tiennuoc/dataconnect"
+  nodeAdminSdk:
+    outputDir: "../../lib/generated/dataconnect-admin"
+    package: "@tiennuoc/dataconnect-admin"

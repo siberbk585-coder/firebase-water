@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { UserRole } from "@/lib/types/enums";;
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { rejectReading } from "@/lib/readings";
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
       actorId: session.id,
       reason: parsed.data.reason,
     });
+    revalidatePath("/admin/billing-sheet");
     return NextResponse.json({ ok: true, reading });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Không từ chối được";

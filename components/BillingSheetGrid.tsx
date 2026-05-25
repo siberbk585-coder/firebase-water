@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { InvoiceStatus, ReadingStatus } from "@prisma/client";
+import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import type { BillingSheetRow } from "@/lib/billingSheet";
 import { formatCurrency, previewBillingRow } from "@/lib/billing";
 import { readingStatusLabel } from "@/lib/vi";
@@ -353,9 +353,11 @@ export function BillingSheetGrid({
                     }}
                     type="number"
                     inputMode="decimal"
-                    className="input w-full max-w-[7rem] py-1 text-right font-mono tabular-nums"
+                    className="input w-full max-w-[7rem] py-1 text-right font-mono tabular-nums disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="—"
                     value={draft}
+                    disabled={row.paid}
+                    title={row.paid ? "Đã xác nhận thu — không thể sửa chỉ số" : undefined}
                     onChange={(e) => setDraft(row.householdId, e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -388,7 +390,14 @@ export function BillingSheetGrid({
                 </td>
                 <td className="space-y-1 text-center text-xs">
                   <div className="mx-auto flex max-w-[7rem] flex-col gap-1">
-                    {pending ? (
+                    {row.paid ? (
+                      <span
+                        className="text-[10px] text-[var(--muted)]"
+                        title="Đã xác nhận thu — không thể sửa chỉ số"
+                      >
+                        Đã khóa
+                      </span>
+                    ) : pending ? (
                       <>
                         <button
                           type="button"

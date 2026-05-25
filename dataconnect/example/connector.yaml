@@ -1,0 +1,47 @@
+connectorId: example
+generate:
+  javascriptSdk:
+    - outputDir: ../../../../src/dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ../../../..
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ../../../../9Route/src/dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ../../../../9Route
+      react: true
+      angular: false
+      clientCache: {}
+    - outputDir: ../../../../Dự án nhà máy
+        nước/water-ocr-billing-firebase/src/dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ../../../../Dự án nhà máy nước/water-ocr-billing-firebase
+      react: true
+      angular: false
+      clientCache: {}
+    - outputDir: ../../../../Dự án nhà máy
+        nước/water-ocr-billing/src/dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ../../../../Dự án nhà máy nước/water-ocr-billing
+      react: true
+      angular: false
+      clientCache: {}
+    - outputDir: ../../../../9Route/tests/src/dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ../../../../9Route/tests
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ../../../../9Route/gitbook/src/dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ../../../../9Route/gitbook
+      react: true
+      angular: false
+      clientCache: {}
+    - outputDir: ../../../../9Route/cli/src/dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ../../../../9Route/cli
+      react: true
+      angular: false
+      clientCache: {}

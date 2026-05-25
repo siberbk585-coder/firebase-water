@@ -1,4 +1,4 @@
-import { InvoiceStatus, ReadingStatus } from "@prisma/client";
+import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import { calculateTotal } from "./billing";
 import { unitPriceForHousehold } from "./routePricing";
 import { syncInvoiceForConfirmedReading } from "./invoices";
@@ -89,7 +89,7 @@ export async function exportInvoicePdfLocal(invoiceId: string): Promise<{
 
   const shouldUploadToN8n =
     process.env.N8N_INVOICE_WEBHOOK_DISABLED !== "true" &&
-    (process.env.VERCEL === "1" || Boolean(process.env.N8N_INVOICE_WEBHOOK_URL?.trim()));
+    Boolean(process.env.N8N_INVOICE_WEBHOOK_URL?.trim());
 
   if (shouldUploadToN8n && n8nInvoiceWebhookUrl()) {
     try {
@@ -104,9 +104,6 @@ export async function exportInvoicePdfLocal(invoiceId: string): Promise<{
       });
       pdfPath = uploaded.url;
     } catch (error) {
-      if (process.env.VERCEL === "1") {
-        throw error;
-      }
       console.warn("[invoicePdfLocal] n8n upload failed, fallback to local file", error);
     }
   }

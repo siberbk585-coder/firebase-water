@@ -18,7 +18,7 @@ Dự án độc lập **firebase-water** — ứng dụng vận hành thu tiền
 8. [Cài đặt & chạy local](#cài-đặt--chạy-local)
 9. [Tài khoản demo](#tài-khoản-demo)
 10. [Scripts](#scripts)
-11. [Deploy (Vercel + Neon)](#deploy-vercel--neon)
+11. [Deploy Firebase (`tiennuoc`)](#deploy-firebase-tiennuoc)
 12. [Tích hợp n8n](#tích-hợp-n8n)
 13. [OCR & nhận diện đồng hồ](#ocr--nhận-diện-đồng-hồ)
 
@@ -30,15 +30,15 @@ Dự án độc lập **firebase-water** — ứng dụng vận hành thu tiền
 |-----|-----------|
 | Framework | Next.js 16 (App Router) |
 | UI | React 19 + Tailwind CSS v4 |
-| Database | PostgreSQL (Neon) qua Prisma ORM |
-| Auth | Session cookie tự quản (bcrypt + HMAC đơn giản) |
+| Database | PostgreSQL (Firebase Data Connect + Cloud SQL) — Prisma truy cập cùng schema |
+| Auth | Firebase Authentication + session cookie (bcrypt legacy) |
 | PDF | pdf-lib (sinh hóa đơn phía server) |
 | OCR | Tesseract.js (client/server), Roboflow Workflow (tùy chọn) |
 | Ảnh / PDF | Vercel Blob hoặc local `storage/` |
 | Automation | n8n (lưu ảnh Drive, gửi Zalo OA, lưu PDF) |
 | Excel | xlsx / xlsx-js-style (xuất/nhập sổ thu) |
 | QR thanh toán | VietQR (BIN ngân hàng + số tài khoản) |
-| Deploy | Vercel (serverless) |
+| Deploy | Firebase App Hosting (`tiennuoc`) |
 | MCP | `@modelcontextprotocol/sdk` (upload ảnh từ n8n/agent) |
 
 ---
@@ -453,7 +453,59 @@ Hộ dân demo gắn với đồng hồ `DH00001`.
 
 ---
 
-## Deploy (Vercel + Neon)
+## Xác thực (Firebase Auth + phân quyền)
+
+| Vai trò | Tài khoản demo | Quyền |
+|---------|----------------|-------|
+| **ADMIN** | `admin` / `123456` | Toàn bộ `/admin/*` |
+| **RESIDENT** | `0912345678` / `123456` | `/resident/*` |
+
+- Đăng nhập qua **Firebase Authentication** (email/password). Số điện thoại được map thành `sdt@accounts.thu-ien-nuoc.local`.
+- **Phân quyền** lưu trong Postgres (`User.role`) và đồng bộ **custom claim** Firebase (`ADMIN` / `RESIDENT`).
+- Admin chỉ truy cập khu vực quản trị; hộ dân chỉ xem khu vực hộ dân (`lib/guards.ts`).
+
+```bash
+# Bật Email/Password (đã deploy): firebase deploy --only auth
+
+# Đồng bộ user DB → Firebase (sau migrate)
+npm run firebase:provision-auth -- --account admin --password 123456
+npm run firebase:provision-auth              # tất cả user
+npm run firebase:provision-auth -- --role ADMIN
+```
+
+Biến môi trường: xem `.env.example` (`NEXT_PUBLIC_FIREBASE_*`).
+
+---
+
+## Deploy Firebase (`tiennuoc`)
+
+**Production:** https://tiennuoc--tiennuoc.asia-southeast1.hosted.app
+
+Chi tiết: [docs/FIREBASE_TIENNUOC.md](docs/FIREBASE_TIENNUOC.md)
+
+| Thành phần | Giá trị |
+|------------|---------|
+| Firebase project | `tiennuoc` |
+| Data Connect | `tiennuoc-water` |
+| Cloud SQL | `tiennuoc-db` / DB `tiennuoc_water` |
+| App Hosting backend | `tiennuoc` |
+
+```bash
+npx -y firebase-tools@latest use tiennuoc
+npm run dataconnect:deploy          # schema GraphQL → Postgres
+npx -y firebase-tools@latest dataconnect:sql:migrate --force
+npm run firebase:secrets
+npx -y firebase-tools@latest deploy --only apphosting
+# Seed ~50 user test (tùy chọn):
+# SOURCE_DATABASE_URL=... DATABASE_URL=... npm run firebase:migrate-subset
+npm run firebase:provision-auth
+```
+
+Bật **Email/Password** tại [Authentication](https://console.firebase.google.com/project/tiennuoc/authentication/providers).
+
+---
+
+## Deploy (Vercel + Neon) — dự án cũ (không dùng)
 
 1. Push repo [firebase-water](https://github.com/siberbk585-coder/firebase-water) lên GitHub.
 2. Vercel → **Import project** → **Storage → Neon** (chọn **Free**).

@@ -3,7 +3,7 @@
  * MCP server: upload ảnh → trả URL (cho n8n MCP Client node).
  *
  * Chạy:
- *   FIREBASE_WATER_API_URL=https://firebase-water.vercel.app \
+ *   FIREBASE_WATER_API_URL=https://tiennuoc.web.app \
  *   UPLOAD_API_KEY=your-secret \
  *   node scripts/mcp-image-upload.mjs
  *

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireResident } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/billing";
-import { InvoiceStatus } from "@prisma/client";
+import { InvoiceStatus } from "@/lib/types/enums";;
 import { formatPeriod, invoiceStatusLabel } from "@/lib/vi";
 
 export default async function ResidentInvoicesPage() {

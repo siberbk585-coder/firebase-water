@@ -1,4 +1,4 @@
-import { PeriodStatus } from "@prisma/client";
+import { PeriodStatus } from "@/lib/types/enums";;
 import { prisma } from "./db";
 
 const SETTINGS_ID = "default";

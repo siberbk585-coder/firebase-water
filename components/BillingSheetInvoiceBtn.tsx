@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ReadingStatus } from "@prisma/client";
+import { ReadingStatus } from "@/lib/types/enums";;
 
 export function BillingSheetInvoiceBtn({
   periodId,

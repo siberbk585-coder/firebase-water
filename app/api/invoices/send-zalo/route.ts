@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { InvoiceStatus, UserRole } from "@prisma/client";
+import { InvoiceStatus, UserRole } from "@/lib/types/enums";;
 import { prisma } from "@/lib/db";
 import { buildTransferNote } from "@/lib/paymentQr";
 import { sendInvoiceViaN8n, periodLabelFromParts } from "@/lib/n8nInvoice";

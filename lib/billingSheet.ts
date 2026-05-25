@@ -1,4 +1,4 @@
-import { InvoiceStatus, ReadingStatus } from "@prisma/client";
+import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import { prisma } from "./db";
 import { calculateTotal, calculateUsage } from "./billing";
 import { unitPriceForHousehold } from "./routePricing";

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { buildFullExportBuffer, exportFilename } from "@/lib/xlsxExport";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/types/enums";;
 
 export const runtime = "nodejs";
 

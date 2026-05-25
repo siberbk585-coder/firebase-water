@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/types/enums";
 import { getSession, type SessionUser } from "./auth";
 
 export async function requireAuth(): Promise<SessionUser> {

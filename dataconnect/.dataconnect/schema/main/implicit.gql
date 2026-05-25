@@ -1,0 +1,56 @@
+extend type AuditLog {
+  """
+  ✨ Implicit foreign key field based on `AuditLog`.`actor`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  actorId: UUID @fdc_generated(from: "AuditLog.actor", purpose: IMPLICIT_REF_FIELD)
+}
+extend type Household {
+  """
+  ✨ Implicit foreign key field based on `Household`.`collectionRoute`. It must match the value of `CollectionRoute`.`id`. See `@ref` for how to customize it.
+  """
+  collectionRouteId: UUID @fdc_generated(from: "Household.collectionRoute", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Household`.`priceGroup`. It must match the value of `PriceGroup`.`id`. See `@ref` for how to customize it.
+  """
+  priceGroupId: UUID! @fdc_generated(from: "Household.priceGroup", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Household`.`user`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  userId: UUID @fdc_generated(from: "Household.user", purpose: IMPLICIT_REF_FIELD)
+}
+extend type Invoice {
+  """
+  ✨ Implicit foreign key field based on `Invoice`.`household`. It must match the value of `Household`.`id`. See `@ref` for how to customize it.
+  """
+  householdId: UUID! @fdc_generated(from: "Invoice.household", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Invoice`.`period`. It must match the value of `BillingPeriod`.`id`. See `@ref` for how to customize it.
+  """
+  periodId: UUID! @fdc_generated(from: "Invoice.period", purpose: IMPLICIT_REF_FIELD)
+}
+extend type MeterReading {
+  """
+  ✨ Implicit foreign key field based on `MeterReading`.`household`. It must match the value of `Household`.`id`. See `@ref` for how to customize it.
+  """
+  householdId: UUID! @fdc_generated(from: "MeterReading.household", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `MeterReading`.`period`. It must match the value of `BillingPeriod`.`id`. See `@ref` for how to customize it.
+  """
+  periodId: UUID! @fdc_generated(from: "MeterReading.period", purpose: IMPLICIT_REF_FIELD)
+}
+extend type Notification {
+  """
+  ✨ Implicit foreign key field based on `Notification`.`household`. It must match the value of `Household`.`id`. See `@ref` for how to customize it.
+  """
+  householdId: UUID! @fdc_generated(from: "Notification.household", purpose: IMPLICIT_REF_FIELD)
+}
+extend type Payment {
+  """
+  ✨ Implicit foreign key field based on `Payment`.`confirmedBy`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  confirmedById: UUID @fdc_generated(from: "Payment.confirmedBy", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Payment`.`invoice`. It must match the value of `Invoice`.`id`. See `@ref` for how to customize it.
+  """
+  invoiceId: UUID! @fdc_generated(from: "Payment.invoice", purpose: IMPLICIT_REF_FIELD)
+}

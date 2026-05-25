@@ -4,15 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createHousehold } from "@/app/admin/households/actions";
 
 type RouteOption = { id: string; name: string };
-type PriceGroupOption = { id: string; name: string; code: string };
 
-export function AddHouseholdModal({
-  routes,
-  priceGroups,
-}: {
-  routes: RouteOption[];
-  priceGroups: PriceGroupOption[];
-}) {
+export function AddHouseholdModal({ routes }: { routes: RouteOption[] }) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -35,7 +28,7 @@ export function AddHouseholdModal({
 
       <dialog
         ref={dialogRef}
-        className="w-[min(100%,32rem)] max-w-lg rounded-xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-xl backdrop:bg-black/40"
+        className="w-[min(100%,32rem)] max-w-lg rounded-xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-xl backdrop:bg-black/40 mx-auto my-auto"
         onClose={() => setOpen(false)}
       >
         <form action={createHousehold} className="flex flex-col">
@@ -75,6 +68,26 @@ export function AddHouseholdModal({
             </div>
 
             <div>
+              <label className="label mb-0 text-xs" htmlFor="hh-route">
+                Khu vực thu <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="hh-route"
+                name="collectionRouteId"
+                className="input w-full py-1.5"
+                defaultValue=""
+                required
+              >
+                <option value="" disabled>— Chọn khu vực —</option>
+                {routes.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="label mb-0 text-xs" htmlFor="hh-name">
                 Chủ hộ
               </label>
@@ -108,62 +121,6 @@ export function AddHouseholdModal({
                 className="input w-full py-1.5"
                 placeholder="Tùy chọn"
               />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="label mb-0 text-xs" htmlFor="hh-route">
-                  Khu vực thu
-                </label>
-                <select
-                  id="hh-route"
-                  name="collectionRouteId"
-                  className="input w-full py-1.5"
-                  defaultValue={routes[0]?.id ?? ""}
-                >
-                  <option value="">— Chưa gán —</option>
-                  {routes.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="label mb-0 text-xs" htmlFor="hh-sort">
-                  STT trên tuyến
-                </label>
-                <input
-                  id="hh-sort"
-                  name="routeSortOrder"
-                  type="number"
-                  min={1}
-                  className="input w-full py-1.5"
-                  placeholder="Tùy chọn"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="label mb-0 text-xs" htmlFor="hh-pg">
-                Nhóm giá (dự phòng)
-              </label>
-              <select
-                id="hh-pg"
-                name="priceGroupId"
-                className="input w-full py-1.5"
-                required
-                defaultValue={priceGroups[0]?.id}
-              >
-                {priceGroups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name} ({g.code})
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-[10px] text-[var(--muted)]">
-                Tiền nước tính theo giá khu vực nếu hộ đã gán khu vực.
-              </p>
             </div>
 
             <fieldset className="rounded-lg border border-[var(--border)] bg-slate-50/80 px-3 py-2">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
-import { UserRole, ReadingStatus } from "@prisma/client";
+import { UserRole, ReadingStatus } from "@/lib/types/enums";;
 import { prisma } from "@/lib/db";
 import { syncInvoiceForConfirmedReading } from "@/lib/invoices";
 import { logAudit } from "@/lib/audit";
@@ -66,6 +67,8 @@ export async function POST(request: Request) {
       console.error("[invoices/generate] audit log failed", auditErr);
     }
 
+    revalidatePath("/admin/billing-sheet");
+    revalidatePath("/admin/payments");
     return NextResponse.json({
       ok: true,
       created,

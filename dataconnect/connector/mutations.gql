@@ -1,0 +1,47 @@
+# Mutations — NO_ACCESS cho server (session cookie đã kiểm tra trước khi gọi Admin SDK)
+
+mutation UpsertUserById(
+  $id: UUID!
+  $phone: String!
+  $name: String!
+  $role: UserRole!
+  $firebaseUid: String
+  $passwordHash: String
+) @auth(level: NO_ACCESS) {
+  user_upsert(
+    data: {
+      id: $id
+      phone: $phone
+      name: $name
+      role: $role
+      firebaseUid: $firebaseUid
+      passwordHash: $passwordHash
+    }
+  )
+}
+
+mutation UpdateUserFirebaseUid($id: UUID!, $firebaseUid: String!) @auth(level: NO_ACCESS) {
+  user_update(id: $id, data: { firebaseUid: $firebaseUid })
+}
+
+mutation UpdateUserPasswordHash($id: UUID!, $passwordHash: String!) @auth(level: NO_ACCESS) {
+  user_update(id: $id, data: { passwordHash: $passwordHash })
+}
+
+mutation CreateAuditLog(
+  $actorId: UUID
+  $action: String!
+  $entity: String!
+  $entityId: String
+  $metadata: String
+) @auth(level: NO_ACCESS) {
+  auditLog_insert(
+    data: {
+      actor: { id: $actorId }
+      action: $action
+      entity: $entity
+      entityId: $entityId
+      metadata: $metadata
+    }
+  )
+}

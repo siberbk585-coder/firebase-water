@@ -1,0 +1,82 @@
+# Firebase App Hosting — project tiennuoc (Data Connect + Auth)
+# Secrets: npm run firebase:secrets
+
+runConfig:
+  cpu: 1
+  memoryMiB: 1024
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 80
+
+env:
+  - variable: GOOGLE_CLOUD_PROJECT
+    value: "tiennuoc"
+    availability:
+      - RUNTIME
+  - variable: DATABASE_URL
+    secret: DATABASE_URL
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: DATABASE_URL_UNPOOLED
+    secret: DATABASE_URL_UNPOOLED
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: SESSION_SECRET
+    secret: SESSION_SECRET
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_APP_URL
+    secret: NEXT_PUBLIC_APP_URL
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyBcnuT-2d1k7T1JbJ-EDn8q8WnK7rn3R3g"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "tiennuoc.firebaseapp.com"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "tiennuoc"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "tiennuoc.firebasestorage.app"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "171128777328"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:171128777328:web:70449ad0459ba220b622b5"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_AUTH_EMAIL_DOMAIN
+    value: "accounts.tiennuoc.local"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: OCR_CONFIDENCE_THRESHOLD
+    value: "70"
+    availability:
+      - RUNTIME
+  - variable: DEFAULT_UNIT_PRICE
+    value: "15000"
+    availability:
+      - RUNTIME
+  - variable: STORAGE_DIR
+    value: "tmp"
+    availability:
+      - RUNTIME

@@ -1,4 +1,4 @@
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "@/lib/types/enums";
 import { prisma } from "./db";
 
 export async function getInvoiceForViewer(invoiceId: string, session: {

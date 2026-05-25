@@ -1,4 +1,4 @@
-import { InputMethod, ReadingStatus } from "@prisma/client";
+import { InputMethod, InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import { prisma } from "./db";
 import { detectAnomalies } from "./anomaly";
 import { calculateUsage } from "./billing";
@@ -214,6 +214,18 @@ export async function approveReading(params: {
   if (existing.status !== ReadingStatus.PENDING) {
     throw new Error("Chỉ duyệt được chỉ số đang chờ xử lý");
   }
+
+  const paidInvoice = await prisma.invoice.findFirst({
+    where: {
+      householdId: existing.householdId,
+      periodId: existing.periodId,
+      status: InvoiceStatus.PAID,
+    },
+    select: { id: true },
+  });
+  if (paidInvoice) {
+    throw new Error("Không thể chốt lại — hóa đơn kỳ này đã được xác nhận thu");
+  }
   const value = params.confirmedValue ?? existing.confirmedValue;
   if (value == null) throw new Error("Thiếu chỉ số mới (CSM)");
 
@@ -286,6 +298,18 @@ export async function adminUpsertReading(params: {
   confirmedValue: number;
   actorId: string;
 }) {
+  const paidInvoice = await prisma.invoice.findFirst({
+    where: {
+      householdId: params.householdId,
+      periodId: params.periodId,
+      status: InvoiceStatus.PAID,
+    },
+    select: { id: true },
+  });
+  if (paidInvoice) {
+    throw new Error("Không thể chốt lại — hóa đơn kỳ này đã được xác nhận thu");
+  }
+
   const household = await prisma.household.findUniqueOrThrow({
     where: { id: params.householdId },
     select: { householdCode: true, meterCode: true },

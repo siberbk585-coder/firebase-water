@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/types/enums";;
 import { exportInvoicePdfLocal } from "@/lib/invoicePdfLocal";
 import { logAudit } from "@/lib/audit";
 

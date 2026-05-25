@@ -1,4 +1,4 @@
-import { ReadingStatus } from "@prisma/client";
+import { ReadingStatus } from "@/lib/types/enums";;
 import { prisma } from "./db";
 import { getBillingPeriods, getCollectionRoutes } from "./billingSheet";
 

@@ -1,4 +1,4 @@
-import { InvoiceStatus, ReadingStatus } from "@prisma/client";
+import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import { calculateTotal } from "./billing";
 import { prisma } from "./db";
 import { unitPriceForHousehold } from "./routePricing";
@@ -28,6 +28,21 @@ export async function syncInvoiceForConfirmedReading(
     reading.usageM3 == null
   ) {
     return null;
+  }
+
+  // Không cập nhật hóa đơn đã phát hành (ISSUED) hoặc đã thu (PAID)
+  const existing = await prisma.invoice.findUnique({
+    where: { householdId_periodId: { householdId, periodId } },
+    select: { id: true, status: true, unitPrice: true, totalAmount: true, usageM3: true },
+  });
+  if (existing?.status === InvoiceStatus.ISSUED || existing?.status === InvoiceStatus.PAID) {
+    return {
+      id: existing.id,
+      usageM3: existing.usageM3,
+      unitPrice: existing.unitPrice,
+      totalAmount: existing.totalAmount,
+      status: existing.status,
+    };
   }
 
   const unitPrice = unitPriceForHousehold(reading.household);

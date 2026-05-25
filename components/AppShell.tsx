@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { SessionUser } from "@/lib/auth";
 import { appTitle, userRoleLabel } from "@/lib/vi";
 import { AppNav } from "@/components/AppNav";
+import { LogoutButton } from "@/components/LogoutButton";
 
 export function AppShell({
   user,
@@ -54,14 +55,7 @@ export function AppShell({
                   {userRoleLabel(user.role)}
                 </div>
               </div>
-              <form action="/api/auth/logout" method="POST" className="shrink-0">
-                <button
-                  type="submit"
-                  className="btn btn-secondary whitespace-nowrap px-2.5 py-1.5 text-xs font-semibold sm:px-3 sm:text-sm"
-                >
-                  Đăng xuất
-                </button>
-              </form>
+              <LogoutButton className="btn btn-secondary shrink-0 whitespace-nowrap px-2.5 py-1.5 text-xs font-semibold sm:px-3 sm:text-sm" />
             </div>
           </div>
         </div>

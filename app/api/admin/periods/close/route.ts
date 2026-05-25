@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { PeriodStatus, UserRole } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { PeriodStatus, UserRole } from "@/lib/types/enums";;
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -17,6 +18,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Dữ liệu không hợp lệ" }, { status: 400 });
   }
 
+  const existing = await prisma.billingPeriod.findUnique({
+    where: { id: parsed.data.periodId },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Kỳ không tồn tại" }, { status: 404 });
+  }
+  if (existing.status !== PeriodStatus.OPEN) {
+    return NextResponse.json({ error: "Kỳ đã đóng" }, { status: 400 });
+  }
+
   const period = await prisma.billingPeriod.update({
     where: { id: parsed.data.periodId },
     data: { status: PeriodStatus.CLOSED },
@@ -29,5 +40,7 @@ export async function POST(request: Request) {
     entityId: period.id,
   });
 
+  revalidatePath("/admin/billing-sheet");
+  revalidatePath("/admin/dashboard");
   return NextResponse.json({ ok: true, period });
 }

@@ -11,18 +11,24 @@ datasource db {
 enum UserRole {
   RESIDENT
   ADMIN
+
+  @@map("user_role")
 }
 
 enum ReadingStatus {
   PENDING
   CONFIRMED
   REJECTED
+
+  @@map("reading_status")
 }
 
 enum InputMethod {
   OCR_CONFIRMED
   OCR_EDITED
   MANUAL
+
+  @@map("input_method")
 }
 
 enum InvoiceStatus {
@@ -30,165 +36,212 @@ enum InvoiceStatus {
   ISSUED
   PAID
   CANCELLED
+
+  @@map("invoice_status")
 }
 
 enum PeriodStatus {
   OPEN
   CLOSED
+
+  @@map("period_status")
 }
 
 enum HouseholdStatus {
   ACTIVE
   INACTIVE
+
+  @@map("household_status")
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+
+  @@map("payment_method")
 }
 
 model User {
-  id           String     @id @default(cuid())
+  id           String     @id @default(uuid()) @db.Uuid
   phone        String     @unique
-  passwordHash String
+  firebaseUid  String?    @unique @map("firebase_uid")
+  passwordHash String?    @map("password_hash")
   name         String
   role         UserRole   @default(RESIDENT)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
   household    Household?
   auditLogs    AuditLog[] @relation("AuditActor")
   payments     Payment[]  @relation("PaymentConfirmer")
+
+  @@map("user")
 }
 
 model PriceGroup {
-  id        String      @id @default(cuid())
+  id        String      @id @default(uuid()) @db.Uuid
   code      String      @unique
   name      String
-  unitPrice Float
-  createdAt DateTime    @default(now())
+  unitPrice Float       @map("unit_price")
+  createdAt DateTime    @default(now()) @map("created_at")
   households Household[]
+
+  @@map("price_group")
 }
 
 model CollectionRoute {
-  id        String      @id @default(cuid())
+  id        String      @id @default(uuid()) @db.Uuid
   code      String      @unique
   name      String
-  sortOrder Int         @default(0)
-  /// Đơn giá VNĐ/m³ cho cả khu vực — ưu tiên hơn nhóm giá từng hộ
-  unitPrice Float?
-  createdAt DateTime    @default(now())
+  sortOrder Int         @default(0) @map("sort_order")
+  unitPrice Float?      @map("unit_price")
+  createdAt DateTime    @default(now()) @map("created_at")
   households Household[]
+
+  @@map("collection_route")
 }
 
 model Household {
-  id                String            @id @default(cuid())
-  householdCode     String            @unique
-  meterCode         String            @unique
+  id                String            @id @default(uuid()) @db.Uuid
+  householdCode     String            @unique @map("household_code")
+  meterCode         String            @unique @map("meter_code")
   address           String
-  residentName      String
-  contactPhone      String?
+  residentName      String            @map("resident_name")
+  contactPhone      String?           @map("contact_phone")
   status            HouseholdStatus   @default(ACTIVE)
+  paymentMethod     PaymentMethod     @default(CASH) @map("payment_method")
   note              String?
-  collectionRouteId String?
+  collectionRouteId String?           @map("collection_route_id") @db.Uuid
   collectionRoute   CollectionRoute?  @relation(fields: [collectionRouteId], references: [id])
-  routeSortOrder    Int?
-  userId            String?           @unique
+  routeSortOrder    Int?              @map("route_sort_order")
+  userId            String?           @unique @map("user_id") @db.Uuid
   user              User?             @relation(fields: [userId], references: [id])
-  priceGroupId      String
+  priceGroupId      String            @map("price_group_id") @db.Uuid
   priceGroup        PriceGroup        @relation(fields: [priceGroupId], references: [id])
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
   readings          MeterReading[]
   invoices          Invoice[]
   notifications     Notification[]
+
+  @@map("household")
 }
 
 model BillingPeriod {
-  id        String         @id @default(cuid())
+  id        String         @id @default(uuid()) @db.Uuid
   year      Int
   month     Int
   status    PeriodStatus   @default(OPEN)
-  createdAt DateTime       @default(now())
+  createdAt DateTime       @default(now()) @map("created_at")
   readings  MeterReading[]
   invoices  Invoice[]
 
   @@unique([year, month])
+  @@map("billing_period")
 }
 
 model MeterReading {
-  id              String        @id @default(cuid())
-  householdId     String
+  id              String        @id @default(uuid()) @db.Uuid
+  householdId     String        @map("household_id") @db.Uuid
   household       Household     @relation(fields: [householdId], references: [id])
-  periodId        String
+  periodId        String        @map("period_id") @db.Uuid
   period          BillingPeriod @relation(fields: [periodId], references: [id])
-  oldReading      Float
-  ocrValue        Float?
-  confirmedValue  Float?
+  oldReading      Float         @map("old_reading")
+  ocrValue        Float?        @map("ocr_value")
+  confirmedValue  Float?        @map("confirmed_value")
   confidence      Float?
-  inputMethod     InputMethod?
-  imagePath       String?
-  usageM3         Float?
-  anomalyFlags    String        @default("[]")
+  inputMethod     InputMethod?  @map("input_method")
+  imagePath       String?       @map("image_path")
+  usageM3         Float?        @map("usage_m3")
+  anomalyFlags    String        @default("[]") @map("anomaly_flags")
   status          ReadingStatus @default(PENDING)
-  submittedAt     DateTime      @default(now())
-  confirmedAt     DateTime?
+  submittedAt     DateTime      @default(now()) @map("submitted_at")
+  confirmedAt     DateTime?     @map("confirmed_at")
 
   @@unique([householdId, periodId])
+  @@map("meter_reading")
 }
 
 model Invoice {
-  id            String        @id @default(cuid())
-  householdId   String
-  household     Household     @relation(fields: [householdId], references: [id])
-  periodId      String
-  period        BillingPeriod @relation(fields: [periodId], references: [id])
-  usageM3       Float
-  unitPrice     Float
-  totalAmount   Float
-  pdfPath       String?
-  status        InvoiceStatus @default(DRAFT)
-  issuedAt      DateTime?
-  zaloSentAt    DateTime?
-  zaloMessageId String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id            String            @id @default(uuid()) @db.Uuid
+  householdId   String            @map("household_id") @db.Uuid
+  household     Household         @relation(fields: [householdId], references: [id])
+  periodId      String            @map("period_id") @db.Uuid
+  period        BillingPeriod     @relation(fields: [periodId], references: [id])
+  usageM3       Float             @map("usage_m3")
+  unitPrice     Float             @map("unit_price")
+  totalAmount   Float             @map("total_amount")
+  pdfPath       String?           @map("pdf_path")
+  status        InvoiceStatus     @default(DRAFT)
+  issuedAt      DateTime?         @map("issued_at")
+  zaloSentAt    DateTime?         @map("zalo_sent_at")
+  zaloMessageId String?           @map("zalo_message_id")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
   payment       Payment?
+  sendLogs      InvoiceSendLog[]
 
   @@unique([householdId, periodId])
+  @@index([householdId, status])
+  @@map("invoice")
+}
+
+model InvoiceSendLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  invoiceId String   @map("invoice_id") @db.Uuid
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  sentAt    DateTime @default(now()) @map("sent_at")
+  channel   String   @default("BANK_TRANSFER")
+  note      String?
+
+  @@map("invoice_send_log")
 }
 
 model SystemSettings {
   id             String   @id @default("default")
-  periodCloseDay Int      @default(25)
+  periodCloseDay Int      @default(25) @map("period_close_day")
   timezone       String   @default("Asia/Ho_Chi_Minh")
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
 }
 
 model Payment {
-  id           String    @id @default(cuid())
-  invoiceId    String    @unique
-  invoice      Invoice   @relation(fields: [invoiceId], references: [id])
-  amount       Float
-  method       String    @default("CASH")
-  note         String?
-  confirmedAt  DateTime?
-  confirmedById String?
-  confirmedBy  User?     @relation("PaymentConfirmer", fields: [confirmedById], references: [id])
-  createdAt    DateTime  @default(now())
+  id            String    @id @default(uuid()) @db.Uuid
+  invoiceId     String    @unique @map("invoice_id") @db.Uuid
+  invoice       Invoice   @relation(fields: [invoiceId], references: [id])
+  amount        Float
+  method        PaymentMethod @default(CASH)
+  note          String?
+  confirmedAt   DateTime? @map("confirmed_at")
+  confirmedById String?   @map("confirmed_by_id") @db.Uuid
+  confirmedBy   User?     @relation("PaymentConfirmer", fields: [confirmedById], references: [id])
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("payment")
 }
 
 model Notification {
-  id          String    @id @default(cuid())
-  householdId String
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @map("household_id") @db.Uuid
   household   Household @relation(fields: [householdId], references: [id])
   title       String
   message     String
   read        Boolean   @default(false)
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("notification")
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  actorId   String?
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String?  @map("actor_id") @db.Uuid
   actor     User?    @relation("AuditActor", fields: [actorId], references: [id])
   action    String
   entity    String
-  entityId  String?
+  entityId  String?  @map("entity_id")
   metadata  String   @default("{}")
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([entityId, action])
+  @@map("audit_log")
 }

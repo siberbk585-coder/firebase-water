@@ -1,0 +1,158 @@
+# Schema thu tiền nước — đồng bộ với prisma/schema.prisma (Data Connect quản lý Cloud SQL)
+
+enum UserRole {
+  RESIDENT
+  ADMIN
+}
+
+enum ReadingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum InputMethod {
+  OCR_CONFIRMED
+  OCR_EDITED
+  MANUAL
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  CANCELLED
+}
+
+enum PeriodStatus {
+  OPEN
+  CLOSED
+}
+
+enum HouseholdStatus {
+  ACTIVE
+  INACTIVE
+}
+
+type User @table {
+  id: UUID! @default(expr: "uuidV4()")
+  phone: String! @unique @col(dataType: "varchar(32)")
+  firebaseUid: String @unique @col(dataType: "varchar(128)")
+  passwordHash: String @col(dataType: "text")
+  name: String!
+  role: UserRole! @default(value: RESIDENT)
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type PriceGroup @table {
+  id: UUID! @default(expr: "uuidV4()")
+  code: String! @unique @col(dataType: "varchar(32)")
+  name: String!
+  unitPrice: Float!
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type CollectionRoute @table {
+  id: UUID! @default(expr: "uuidV4()")
+  code: String! @unique @col(dataType: "varchar(32)")
+  name: String!
+  sortOrder: Int! @default(value: 0)
+  unitPrice: Float
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type Household @table {
+  id: UUID! @default(expr: "uuidV4()")
+  householdCode: String! @unique @col(dataType: "varchar(64)")
+  meterCode: String! @unique @col(dataType: "varchar(64)")
+  address: String!
+  residentName: String!
+  contactPhone: String @col(dataType: "varchar(32)")
+  status: HouseholdStatus! @default(value: ACTIVE)
+  note: String @col(dataType: "text")
+  routeSortOrder: Int
+  user: User @unique
+  collectionRoute: CollectionRoute
+  priceGroup: PriceGroup!
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type BillingPeriod @table @unique(fields: ["year", "month"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  year: Int!
+  month: Int!
+  status: PeriodStatus! @default(value: OPEN)
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type MeterReading @table @unique(fields: ["household", "period"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  household: Household!
+  period: BillingPeriod!
+  oldReading: Float!
+  ocrValue: Float
+  confirmedValue: Float
+  confidence: Float
+  inputMethod: InputMethod
+  imagePath: String @col(dataType: "text")
+  usageM3: Float
+  anomalyFlags: String! @default(value: "[]") @col(dataType: "text")
+  status: ReadingStatus! @default(value: PENDING)
+  submittedAt: Timestamp! @default(expr: "request.time")
+  confirmedAt: Timestamp
+}
+
+type Invoice @table @unique(fields: ["household", "period"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  household: Household!
+  period: BillingPeriod!
+  usageM3: Float!
+  unitPrice: Float!
+  totalAmount: Float!
+  pdfPath: String @col(dataType: "text")
+  status: InvoiceStatus! @default(value: DRAFT)
+  issuedAt: Timestamp
+  zaloSentAt: Timestamp
+  zaloMessageId: String @col(dataType: "varchar(128)")
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type SystemSettings @table(key: "id") {
+  id: String! @default(value: "default")
+  periodCloseDay: Int! @default(value: 25)
+  timezone: String! @default(value: "Asia/Ho_Chi_Minh")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type Payment @table {
+  id: UUID! @default(expr: "uuidV4()")
+  invoice: Invoice! @unique
+  amount: Float!
+  method: String! @default(value: "CASH") @col(dataType: "varchar(32)")
+  note: String @col(dataType: "text")
+  confirmedAt: Timestamp
+  confirmedBy: User
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type Notification @table {
+  id: UUID! @default(expr: "uuidV4()")
+  household: Household!
+  title: String!
+  message: String! @col(dataType: "text")
+  read: Boolean! @default(value: false)
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type AuditLog @table {
+  id: UUID! @default(expr: "uuidV4()")
+  actor: User
+  action: String! @col(dataType: "varchar(64)")
+  entity: String! @col(dataType: "varchar(64)")
+  entityId: String @col(dataType: "varchar(64)")
+  metadata: String! @default(value: "{}") @col(dataType: "text")
+  createdAt: Timestamp! @default(expr: "request.time")
+}
