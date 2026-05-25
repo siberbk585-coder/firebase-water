@@ -32,6 +32,7 @@
     "firebase:migrate-subset": "node scripts/migrate-subset-to-tiennuoc.mjs",
     "firebase:seed-demo": "node scripts/seed-tiennuoc-demo.mjs",
     "firebase:seed-mock-50": "tsx scripts/seed-mock-50.ts",
+    "db:update-addresses-haiphong": "tsx scripts/update-addresses-haiphong.mjs",
     "dataconnect:generate": "npx -y firebase-tools@latest dataconnect:sdk:generate",
     "dataconnect:deploy": "npx -y firebase-tools@latest deploy --only dataconnect",
     "firebase:deploy-hosting": "npx -y firebase-tools@latest deploy --only hosting",
@@ -42,11 +43,13 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@expo-google-fonts/be-vietnam-pro": "^0.4.1",
     "@fontsource/be-vietnam-pro": "^5.2.8",
     "@google-cloud/cloud-sql-connector": "^1.11.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^6.19.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@vercel/blob": "^2.4.0",
     "bcryptjs": "^3.0.3",
     "firebase": "^12.13.0",

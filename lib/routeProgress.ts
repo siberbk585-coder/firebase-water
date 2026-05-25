@@ -13,6 +13,8 @@ export async function getCurrentPeriodProgress() {
     prisma.meterReading.count({
       where: {
         periodId: current.id,
+        household: { status: "ACTIVE" },
+        status: { in: [ReadingStatus.PENDING, ReadingStatus.CONFIRMED] },
         OR: [
           { confirmedValue: { not: null } },
           { ocrValue: { not: null } },
@@ -33,8 +35,9 @@ export async function getCurrentPeriodProgress() {
       const recorded = await prisma.meterReading.count({
         where: {
           periodId: current.id,
-          household: { collectionRouteId: route.id },
+          household: { collectionRouteId: route.id, status: "ACTIVE" },
           confirmedValue: { not: null },
+          status: { in: [ReadingStatus.PENDING, ReadingStatus.CONFIRMED] },
         },
       });
       return {

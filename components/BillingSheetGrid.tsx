@@ -216,7 +216,7 @@ export function BillingSheetGrid({
       const res = await fetch("/api/payments/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceId: row.invoiceId, method: "TRANSFER" }),
+        body: JSON.stringify({ invoiceId: row.invoiceId, method: "BANK_TRANSFER" }),
       });
       const data = await res.json();
       if (!res.ok) {

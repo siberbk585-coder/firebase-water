@@ -1,5 +1,5 @@
 import { PDFDocument } from "pdf-lib";
-import sharp from "sharp";
+import { Resvg } from "@resvg/resvg-js";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { fetchPaymentQrImage } from "./paymentQr";
@@ -9,6 +9,32 @@ const FONT_BASE = join(
   process.cwd(),
   "node_modules/@fontsource/be-vietnam-pro/files"
 );
+/** TTF font files for resvg server-side rendering (in public/fonts/). */
+const TTF_BASE = join(process.cwd(), "public/fonts");
+const TTF_FILES: Record<number, string> = {
+  500: "BeVietnamPro-Medium.ttf",
+  600: "BeVietnamPro-SemiBold.ttf",
+  700: "BeVietnamPro-Bold.ttf",
+  800: "BeVietnamPro-ExtraBold.ttf",
+  900: "BeVietnamPro-Black.ttf",
+};
+
+/** Load TTF font buffers for resvg (resvg cần TTF, không phải woff). */
+let _fontBuffers: Buffer[] | null = null;
+function fontBuffers(): Buffer[] {
+  if (_fontBuffers) return _fontBuffers;
+  const bufs: Buffer[] = [];
+  for (const weight of FONT_WEIGHTS) {
+    const file = TTF_FILES[weight];
+    try {
+      bufs.push(readFileSync(join(TTF_BASE, file)));
+    } catch (e) {
+      console.warn(`[pdf] Missing font file: ${file}`, e);
+    }
+  }
+  _fontBuffers = bufs;
+  return bufs;
+}
 
 function loadFontFaceCSS(): string {
   const subsets = ["latin", "vietnamese"] as const;
@@ -148,7 +174,7 @@ function textLines({
   return wrapText(text, maxChars, maxLines)
     .map(
       (line, index) =>
-        `<text x="${x}" y="${y + index * lineHeight}" font-family="'BVP', Arial, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}">${escapeXml(line)}</text>`
+        `<text x="${x}" y="${y + index * lineHeight}" font-family="'Be Vietnam Pro', Arial, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}">${escapeXml(line)}</text>`
     )
     .join("");
 }
@@ -187,14 +213,14 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   <defs>
     <style>
       ${fontFaceCSS()}
-      .font { font-family: 'BVP', Arial, sans-serif; }
-      .muted { fill: #64748b; font-family: 'BVP', Arial, sans-serif; }
-      .label { fill: #64748b; font-family: 'BVP', Arial, sans-serif; font-size: 22px; font-weight: 700; letter-spacing: .08em; }
-      .value { fill: #172033; font-family: 'BVP', Arial, sans-serif; font-size: 30px; font-weight: 700; }
-      .body { fill: #334155; font-family: 'BVP', Arial, sans-serif; font-size: 26px; font-weight: 500; }
-      .small { fill: #64748b; font-family: 'BVP', Arial, sans-serif; font-size: 20px; font-weight: 500; }
-      .tableHead { fill: #0f766e; font-family: 'BVP', Arial, sans-serif; font-size: 22px; font-weight: 800; letter-spacing: .04em; }
-      .tableCell { fill: #172033; font-family: 'BVP', Arial, sans-serif; font-size: 26px; font-weight: 600; }
+      .font { font-family: 'Be Vietnam Pro', Arial, sans-serif; }
+      .muted { fill: #64748b; font-family: 'Be Vietnam Pro', Arial, sans-serif; }
+      .label { fill: #64748b; font-family: 'Be Vietnam Pro', Arial, sans-serif; font-size: 22px; font-weight: 700; letter-spacing: .08em; }
+      .value { fill: #172033; font-family: 'Be Vietnam Pro', Arial, sans-serif; font-size: 30px; font-weight: 700; }
+      .body { fill: #334155; font-family: 'Be Vietnam Pro', Arial, sans-serif; font-size: 26px; font-weight: 500; }
+      .small { fill: #64748b; font-family: 'Be Vietnam Pro', Arial, sans-serif; font-size: 20px; font-weight: 500; }
+      .tableHead { fill: #0f766e; font-family: 'Be Vietnam Pro', Arial, sans-serif; font-size: 22px; font-weight: 800; letter-spacing: .04em; }
+      .tableCell { fill: #172033; font-family: 'Be Vietnam Pro', Arial, sans-serif; font-size: 26px; font-weight: 600; }
     </style>
   </defs>
 
@@ -278,9 +304,15 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     addInfo: transferNote,
   });
   const svg = invoiceSvg(data, qrDataUri(qrBuffer));
-  const png = await sharp(Buffer.from(svg, "utf8"))
-    .png({ compressionLevel: 9 })
-    .toBuffer();
+  const resvg = new Resvg(svg, {
+    font: {
+      fontBuffers: fontBuffers(),
+      defaultFontFamily: "Be Vietnam Pro",
+      loadSystemFonts: false,
+    },
+    background: "white",
+  });
+  const png = Buffer.from(resvg.render().asPng());
 
   const doc = await PDFDocument.create();
   const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);

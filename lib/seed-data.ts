@@ -28,43 +28,41 @@ export const TEST_RESIDENT_ACCOUNTS = Array.from({ length: 20 }, (_, i) => {
   };
 });
 
+/** Đường phố Hải Phòng (khu vực thu nước mock). */
 export const STREETS = [
+  "Lạch Tray",
   "Lê Lợi",
-  "Nguyễn Huệ",
-  "Trần Hưng Đạo",
-  "Phan Đình Phùng",
-  "Hoàng Diệu",
-  "Lý Thường Kiệt",
-  "Pasteur",
-  "Hai Bà Trưng",
-  "Cách Mạng Tháng Tám",
-  "Võ Văn Tần",
+  "Trần Nguyên Hãn",
+  "Tô Hiệu",
+  "Đinh Tiên Hoàng",
+  "Lương Khánh Thiện",
+  "Nguyễn Bỉnh Khiêm",
+  "Trần Phú",
+  "Lê Đại Hành",
+  "Đà Nẵng",
 ];
 
 export const WARDS = [
-  "Phường 1",
-  "Phường 2",
-  "Phường 3",
-  "Phường 4",
-  "Phường 5",
-  "Phường 6",
-  "Phường 7",
-  "Phường 8",
+  "Phường Hoàng Văn Thụ",
+  "Phường Máy Chai",
+  "Phường Máy Tơ",
+  "Phường Cầu Tre",
+  "Phường Gia Viên",
+  "Phường Lạch Tray",
+  "Phường Đông Khê",
+  "Phường Lam Sơn",
+  "Phường An Biên",
+  "Phường Hàng Kênh",
 ];
 
 export const DISTRICTS = [
-  "Quận 1",
-  "Quận 2",
-  "Quận 3",
-  "Quận 4",
-  "Quận 5",
-  "Quận 6",
-  "Quận 7",
-  "Quận 8",
-  "Quận 9",
-  "Quận 10",
-  "Quận 11",
-  "Quận 12",
+  "Quận Hồng Bàng",
+  "Quận Ngô Quyền",
+  "Quận Lê Chân",
+  "Quận Hải An",
+  "Quận Kiến An",
+  "Quận Đồ Sơn",
+  "Quận Dương Kinh",
 ];
 
 const HO = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng"];
@@ -100,5 +98,5 @@ export function randomAddress(index: number): string {
   const street = STREETS[index % STREETS.length];
   const ward = WARDS[index % WARDS.length];
   const district = DISTRICTS[index % DISTRICTS.length];
-  return `Số ${so}, đường ${street}, ${ward}, ${district}, TP. Hồ Chí Minh`;
+  return `Số ${so}, đường ${street}, ${ward}, ${district}, Thành phố Hải Phòng`;
 }

@@ -115,102 +115,100 @@ export default async function AdminDashboardPage() {
         />
       </section>
 
+      <section className="card mb-6">
+        <h2 className="mb-3 text-lg font-bold">Khu vực thu</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {progress.routeProgress.map((route) => {
+            const percent =
+              route.total > 0 ? Math.round((route.recorded / route.total) * 100) : 0;
+            return (
+              <Link
+                key={route.routeId}
+                href={`/admin/billing-sheet?route=${route.routeId}`}
+                className="block rounded-lg border border-[var(--border)] bg-[var(--card-muted)] px-3 py-2 hover:bg-[var(--primary-soft)]/45"
+              >
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-semibold">{route.routeName}</span>
+                  <span className="text-[var(--muted)]">{percent}%</span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                  <div
+                    className="h-full rounded-full bg-[var(--primary)]"
+                    style={{ width: `${Math.min(percent, 100)}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  {route.recorded}/{route.total} đã ghi, còn {route.missing}
+                </p>
+              </Link>
+            );
+          })}
+          {!progress.routeProgress.length && (
+            <p className="text-sm text-[var(--muted)] sm:col-span-2 lg:col-span-3 xl:col-span-4">
+              Chưa có tuyến thu. Tạo tuyến và gán hộ tại{" "}
+              <Link href="/admin/routes" className="text-[var(--primary)] hover:underline">
+                quản lý tuyến
+              </Link>
+              .
+            </p>
+          )}
+        </div>
+      </section>
+
       <WaterUsageDashboard data={waterUsage} />
 
-      <section className="mb-6 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
-        <div className="card">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold">Checklist vận hành tháng</h2>
-              <p className="text-sm text-[var(--muted)]">
-                Đi theo thứ tự này để tránh tạo hóa đơn khi chưa chốt CSM.
-              </p>
-            </div>
-            <span className="badge bg-[var(--primary-soft)] text-[var(--primary-dark)]">
-              {formatPeriod(progress.period.month, progress.period.year)}
-            </span>
+      <section className="card mb-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold">Checklist vận hành tháng</h2>
+            <p className="text-sm text-[var(--muted)]">
+              Đi theo thứ tự này để tránh tạo hóa đơn khi chưa chốt CSM.
+            </p>
           </div>
-
-          <div className="grid gap-3">
-            <WorkflowStep
-              number="1"
-              title="Ghi chỉ số"
-              body="Hộ dân gửi CSM, nhân viên có thể nhập trực tiếp trên bảng tuyến."
-              href="/admin/billing-sheet?route=all"
-              cta="Mở bảng ghi"
-              status={
-                progress.pending > 0
-                  ? `${progress.pending} chờ chốt`
-                  : missingReadings > 0
-                    ? `${missingReadings} chưa ghi`
-                    : "Hoàn tất"
-              }
-            />
-            <WorkflowStep
-              number="2"
-              title="Chốt chỉ số"
-              body="Xem ảnh nếu có, chốt hoặc từ chối chỉ số hộ dân đã gửi."
-              href="/admin/billing-sheet?route=all&status=pending"
-              cta="Xem chờ chốt"
-              status={`${confirmedReadings} đã xác nhận, ${rejectedReadings} từ chối`}
-            />
-            <WorkflowStep
-              number="3"
-              title="Hóa đơn PDF"
-              body="Trên Bảng thu nước: chốt CSM → bấm「Hóa đơn」từng hộ để tạo/xem PDF."
-              href="/admin/billing-sheet?route=all"
-              cta="Mở bảng thu"
-              status={`${issuedInvoices} chưa TT · ${missingPdf} chưa có PDF`}
-            />
-            <WorkflowStep
-              number="4"
-              title="Thu tiền & khóa sổ"
-              body="Đánh dấu đã thu, tải Excel kỳ này rồi đóng kỳ khi hoàn tất."
-              href="/admin/payments"
-              cta="Xác nhận thu"
-              status={`${paidInvoices} hóa đơn đã thu`}
-            />
-          </div>
+          <span className="badge bg-[var(--primary-soft)] text-[var(--primary-dark)]">
+            {formatPeriod(progress.period.month, progress.period.year)}
+          </span>
         </div>
 
-        <div className="card">
-          <h2 className="mb-3 text-lg font-bold">Khu vực thu</h2>
-          <div className="space-y-3">
-            {progress.routeProgress.map((route) => {
-              const percent =
-                route.total > 0 ? Math.round((route.recorded / route.total) * 100) : 0;
-              return (
-                <Link
-                  key={route.routeId}
-                  href={`/admin/billing-sheet?route=${route.routeId}`}
-                  className="block rounded-lg border border-[var(--border)] bg-[var(--card-muted)] px-3 py-2 hover:bg-[var(--primary-soft)]/45"
-                >
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="font-semibold">{route.routeName}</span>
-                    <span className="text-[var(--muted)]">{percent}%</span>
-                  </div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
-                    <div
-                      className="h-full rounded-full bg-[var(--primary)]"
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-                  <p className="mt-1 text-xs text-[var(--muted)]">
-                    {route.recorded}/{route.total} đã ghi, còn {route.missing}
-                  </p>
-                </Link>
-              );
-            })}
-            {!progress.routeProgress.length && (
-              <p className="text-sm text-[var(--muted)]">
-                Chưa có tuyến thu. Tạo tuyến và gán hộ tại{" "}
-                <Link href="/admin/routes" className="text-[var(--primary)] hover:underline">
-                  quản lý tuyến
-                </Link>
-                .
-              </p>
-            )}
-          </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <WorkflowStep
+            number="1"
+            title="Ghi chỉ số"
+            body="Hộ dân gửi CSM, nhân viên có thể nhập trực tiếp trên bảng tuyến."
+            href="/admin/billing-sheet?route=all"
+            cta="Mở bảng ghi"
+            status={
+              progress.pending > 0
+                ? `${progress.pending} chờ chốt`
+                : missingReadings > 0
+                  ? `${missingReadings} chưa ghi`
+                  : "Hoàn tất"
+            }
+          />
+          <WorkflowStep
+            number="2"
+            title="Chốt chỉ số"
+            body="Xem ảnh nếu có, chốt hoặc từ chối chỉ số hộ dân đã gửi."
+            href="/admin/billing-sheet?route=all&status=pending"
+            cta="Xem chờ chốt"
+            status={`${confirmedReadings} đã xác nhận, ${rejectedReadings} từ chối`}
+          />
+          <WorkflowStep
+            number="3"
+            title="Hóa đơn PDF"
+            body="Trên Bảng thu nước: chốt CSM → bấm「Hóa đơn」từng hộ để tạo/xem PDF."
+            href="/admin/billing-sheet?route=all"
+            cta="Mở bảng thu"
+            status={`${issuedInvoices} chưa TT · ${missingPdf} chưa có PDF`}
+          />
+          <WorkflowStep
+            number="4"
+            title="Thu tiền & khóa sổ"
+            body="Đánh dấu đã thu, tải Excel kỳ này rồi đóng kỳ khi hoàn tất."
+            href="/admin/payments"
+            cta="Xác nhận thu"
+            status={`${paidInvoices} hóa đơn đã thu`}
+          />
         </div>
       </section>
 
