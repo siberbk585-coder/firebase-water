@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { PaymentMethod, Prisma } from "@prisma/client";
 import { InputMethod, InvoiceStatus, ReadingStatus } from "@/lib/types/enums";
 import * as XLSX from "xlsx-js-style";
 import { calculateUsage } from "./billing";
@@ -250,7 +250,7 @@ export async function importPeriodRouteWorkbook(params: {
           create: {
             invoiceId: invoice.id,
             amount: invoice.totalAmount,
-            method: "TRANSFER",
+            method: PaymentMethod.BANK_TRANSFER,
             note: "Import Excel",
             confirmedAt: now,
             confirmedById: params.actorId,
@@ -258,7 +258,7 @@ export async function importPeriodRouteWorkbook(params: {
           update: {
             confirmedAt: now,
             confirmedById: params.actorId,
-            method: "TRANSFER",
+            method: PaymentMethod.BANK_TRANSFER,
             note: "Import Excel",
           },
         })
