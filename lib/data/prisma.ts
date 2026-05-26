@@ -13,10 +13,8 @@ function logLevel(): ("error" | "warn")[] {
 }
 
 function useCloudSqlConnector(): boolean {
-  return (
-    isServerlessRuntime() &&
-    Boolean(process.env.DATABASE_URL?.includes("cloudsql"))
-  );
+  if (!process.env.DATABASE_URL?.includes("cloudsql")) return false;
+  return isServerlessRuntime() || process.env.NODE_ENV === "production";
 }
 
 function parseDbUrl(url: string) {
@@ -52,7 +50,11 @@ async function createPrismaClient(): Promise<PrismaClient> {
     user,
     password,
     database,
-    max: 5,
+    // Cloud SQL tier nhỏ: mỗi instance chỉ giữ 1 kết nối (tránh P2037 khi scale)
+    max: 1,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
+    allowExitOnIdle: true,
   });
 
   return new PrismaClient({

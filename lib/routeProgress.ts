@@ -13,37 +13,35 @@ export async function getCurrentPeriodProgress(periodId?: string) {
 
   const routes = await getCollectionRoutes();
 
-  const [totalActive, withReading, pending, householdByRoute, recordedByRoute] =
-    await Promise.all([
-      prisma.household.count({ where: { status: "ACTIVE" } }),
-      prisma.meterReading.count({
-        where: {
-          periodId: current.id,
-          household: { status: "ACTIVE" },
-          status: { in: [ReadingStatus.PENDING, ReadingStatus.CONFIRMED] },
-          OR: [{ confirmedValue: { not: null } }, { ocrValue: { not: null } }],
-        },
-      }),
-      prisma.meterReading.count({
-        where: { periodId: current.id, status: ReadingStatus.PENDING },
-      }),
-      prisma.household.groupBy({
-        by: ["collectionRouteId"],
-        where: { status: "ACTIVE", collectionRouteId: { not: null } },
-        _count: { _all: true },
-      }),
-      prisma.$queryRaw<RouteCountRow[]>`
-        SELECT h.collection_route_id AS "collectionRouteId", COUNT(*)::bigint AS count
-        FROM meter_reading mr
-        INNER JOIN household h ON h.id = mr.household_id
-        WHERE mr.period_id = ${current.id}::uuid
-          AND h.status = 'ACTIVE'::household_status
-          AND h.collection_route_id IS NOT NULL
-          AND mr.confirmed_value IS NOT NULL
-          AND mr.status IN ('PENDING'::reading_status, 'CONFIRMED'::reading_status)
-        GROUP BY h.collection_route_id
-      `,
-    ]);
+  // Tuần tự — tránh mở nhiều kết nối cùng lúc (pool max: 1 trên App Hosting)
+  const totalActive = await prisma.household.count({ where: { status: "ACTIVE" } });
+  const withReading = await prisma.meterReading.count({
+    where: {
+      periodId: current.id,
+      household: { status: "ACTIVE" },
+      status: { in: [ReadingStatus.PENDING, ReadingStatus.CONFIRMED] },
+      OR: [{ confirmedValue: { not: null } }, { ocrValue: { not: null } }],
+    },
+  });
+  const pending = await prisma.meterReading.count({
+    where: { periodId: current.id, status: ReadingStatus.PENDING },
+  });
+  const householdByRoute = await prisma.household.groupBy({
+    by: ["collectionRouteId"],
+    where: { status: "ACTIVE", collectionRouteId: { not: null } },
+    _count: { _all: true },
+  });
+  const recordedByRoute = await prisma.$queryRaw<RouteCountRow[]>`
+    SELECT h.collection_route_id AS "collectionRouteId", COUNT(*)::bigint AS count
+    FROM meter_reading mr
+    INNER JOIN household h ON h.id = mr.household_id
+    WHERE mr.period_id = ${current.id}::uuid
+      AND h.status = 'ACTIVE'::household_status
+      AND h.collection_route_id IS NOT NULL
+      AND mr.confirmed_value IS NOT NULL
+      AND mr.status IN ('PENDING'::reading_status, 'CONFIRMED'::reading_status)
+    GROUP BY h.collection_route_id
+  `;
 
   const totalByRoute = new Map(
     householdByRoute.map((r) => [r.collectionRouteId!, r._count._all])
@@ -65,6 +63,21 @@ export async function getCurrentPeriodProgress(periodId?: string) {
   });
 
   const percent = totalActive > 0 ? Math.round((withReading / totalActive) * 100) : 0;
+
+  if (process.env.K_SERVICE) {
+    // #region agent log
+    console.info(
+      JSON.stringify({
+        sessionId: "5fb16e",
+        runId: "post-fix-v2",
+        hypothesisId: "H2",
+        location: "lib/routeProgress.ts",
+        message: "routeProgress ok",
+        data: { totalActive, routeCount: routes.length, poolMax: 1 },
+      })
+    );
+    // #endregion
+  }
 
   return {
     period: current,

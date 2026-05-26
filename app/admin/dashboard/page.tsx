@@ -26,25 +26,41 @@ export default async function AdminDashboardPage({
   }
 
   const periodId = progress.period.id;
-  const [readingByStatus, invoiceByStatus, missingPdf, waterUsage] = await Promise.all([
-    prisma.meterReading.groupBy({
-      by: ["status"],
-      where: { periodId },
-      _count: { _all: true },
-    }),
-    prisma.invoice.groupBy({
-      by: ["status"],
-      where: { periodId },
-      _count: { _all: true },
-      _sum: { totalAmount: true },
-    }),
-    prisma.invoice.count({ where: { periodId, pdfPath: null } }),
-    loadMonthlyWaterUsage({
+  const readingByStatus = await prisma.meterReading.groupBy({
+    by: ["status"],
+    where: { periodId },
+    _count: { _all: true },
+  });
+  const invoiceByStatus = await prisma.invoice.groupBy({
+    by: ["status"],
+    where: { periodId },
+    _count: { _all: true },
+    _sum: { totalAmount: true },
+  });
+  const missingPdf = await prisma.invoice.count({ where: { periodId, pdfPath: null } });
+  const waterUsage = await loadMonthlyWaterUsage(
+    {
       id: progress.period.id,
       year: progress.period.year,
       month: progress.period.month,
-    }),
-  ]);
+    },
+    progress.allPeriods
+  );
+
+  if (process.env.K_SERVICE) {
+    // #region agent log
+    console.info(
+      JSON.stringify({
+        sessionId: "5fb16e",
+        runId: "post-fix-v2",
+        hypothesisId: "H2",
+        location: "app/admin/dashboard/page.tsx",
+        message: "dashboard metrics ok",
+        data: { periodId, invoiceCount: invoiceByStatus.length },
+      })
+    );
+    // #endregion
+  }
 
   const readingCount = (status: ReadingStatus) =>
     readingByStatus.find((r) => r.status === status)?._count._all ?? 0;
@@ -350,14 +366,22 @@ type MonthlyWaterUsage = {
   routeAlerts: RouteLeakAlert[];
 };
 
-async function loadMonthlyWaterUsage(activePeriod: UsagePeriod): Promise<MonthlyWaterUsage> {
-  const periods = (
-    await prisma.billingPeriod.findMany({
-      orderBy: [{ year: "desc" }, { month: "desc" }],
-      take: 12,
-      select: { id: true, year: true, month: true },
-    })
-  ).reverse();
+async function loadMonthlyWaterUsage(
+  activePeriod: UsagePeriod,
+  allPeriods?: { id: string; year: number; month: number }[]
+): Promise<MonthlyWaterUsage> {
+  const periods = allPeriods
+    ? [...allPeriods]
+        .sort((a, b) => b.year - a.year || b.month - a.month)
+        .slice(0, 12)
+        .reverse()
+    : (
+        await prisma.billingPeriod.findMany({
+          orderBy: [{ year: "desc" }, { month: "desc" }],
+          take: 12,
+          select: { id: true, year: true, month: true },
+        })
+      ).reverse();
 
   const periodIds = periods.map((p) => p.id);
   const usageGroups = periodIds.length
