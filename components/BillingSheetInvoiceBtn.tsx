@@ -21,7 +21,11 @@ export function BillingSheetInvoiceBtn({
   const [loading, setLoading] = useState(false);
 
   if (status !== ReadingStatus.CONFIRMED) {
-    return <span className="text-[10px] text-[var(--muted)]">Chốt số trước</span>;
+    return (
+      <span className="billing-receipt-muted text-[10px] text-[var(--muted)]">
+        Chốt số trước
+      </span>
+    );
   }
 
   async function openPdf() {
@@ -57,7 +61,7 @@ export function BillingSheetInvoiceBtn({
   return (
     <button
       type="button"
-      className="text-xs font-semibold text-[var(--primary)] hover:underline disabled:opacity-50"
+      className="billing-receipt-action disabled:opacity-50"
       disabled={loading}
       onClick={() => void openPdf()}
       title={

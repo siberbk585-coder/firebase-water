@@ -47,21 +47,6 @@ export default async function AdminDashboardPage({
     progress.allPeriods
   );
 
-  if (process.env.K_SERVICE) {
-    // #region agent log
-    console.info(
-      JSON.stringify({
-        sessionId: "5fb16e",
-        runId: "post-fix-v2",
-        hypothesisId: "H2",
-        location: "app/admin/dashboard/page.tsx",
-        message: "dashboard metrics ok",
-        data: { periodId, invoiceCount: invoiceByStatus.length },
-      })
-    );
-    // #endregion
-  }
-
   const readingCount = (status: ReadingStatus) =>
     readingByStatus.find((r) => r.status === status)?._count._all ?? 0;
   const confirmedReadings = readingCount(ReadingStatus.CONFIRMED);

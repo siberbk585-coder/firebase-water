@@ -64,21 +64,6 @@ export async function getCurrentPeriodProgress(periodId?: string) {
 
   const percent = totalActive > 0 ? Math.round((withReading / totalActive) * 100) : 0;
 
-  if (process.env.K_SERVICE) {
-    // #region agent log
-    console.info(
-      JSON.stringify({
-        sessionId: "5fb16e",
-        runId: "post-fix-v2",
-        hypothesisId: "H2",
-        location: "lib/routeProgress.ts",
-        message: "routeProgress ok",
-        data: { totalActive, routeCount: routes.length, poolMax: 1 },
-      })
-    );
-    // #endregion
-  }
-
   return {
     period: current,
     allPeriods: periods,

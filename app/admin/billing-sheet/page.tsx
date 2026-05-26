@@ -11,6 +11,8 @@ import { BillingSheetSummary } from "@/components/BillingSheetSummary";
 import { BillingPeriodSelect } from "@/components/BillingPeriodSelect";
 import { BillingRouteSelect } from "@/components/BillingRouteSelect";
 import { BillingExcelPanel } from "@/components/BillingExcelPanel";
+import { BillingPrintPanel } from "@/components/BillingPrintPanel";
+import { BillingPrintSelectionProvider } from "@/components/billing-print-selection";
 import { formatPeriod } from "@/lib/vi";
 import { ReadingStatus } from "@/lib/types/enums";;
 
@@ -158,52 +160,74 @@ export default async function BillingSheetPage({
         </p>
       </div>
 
-      {/* Hàng 2: Bộ lọc + Excel + Đóng kỳ */}
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <div className="flex flex-wrap items-end gap-2">
-          <Suspense fallback={null}>
-            <BillingPeriodSelect
-              periods={periods.map((p) => ({
-                id: p.id,
-                label: `${formatPeriod(p.month, p.year)}${p.status === "OPEN" ? " (đang thu)" : ""}`,
-              }))}
-              activePeriodId={activePeriod.id}
-              routeId={isSummary ? undefined : routeQuery}
-              isSummary={isSummary}
-            />
-            <BillingRouteSelect
-              periodId={activePeriod.id}
-              routes={routes.map((r) => ({ id: r.id, name: r.name }))}
-              activeRouteId={isAll ? null : activeRoute?.id ?? null}
-              isSummary={isSummary}
-            />
-          </Suspense>
-          {!isSummary && (
-            <form method="get" className="flex items-end gap-1">
-              <input type="hidden" name="period" value={activePeriod.id} />
-              <input type="hidden" name="route" value={routeQuery} />
-              {statusFilter !== "all" && (
-                <input type="hidden" name="status" value={statusFilter} />
-              )}
-              <input
-                name="q"
-                defaultValue={searchQuery ?? ""}
-                placeholder="Tìm MKH, đồng hồ, tên…"
-                className="input py-1.5 text-sm"
-                style={{ width: "200px" }}
-                aria-label="Tìm mã hộ, đồng hồ, tên"
+      {/* Hàng 2: Bộ lọc + In PDF + Excel */}
+      <BillingPrintSelectionProvider>
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+          <div className="flex flex-wrap items-end gap-2">
+            <Suspense fallback={null}>
+              <BillingPeriodSelect
+                periods={periods.map((p) => ({
+                  id: p.id,
+                  label: `${formatPeriod(p.month, p.year)}${p.status === "OPEN" ? " (đang thu)" : ""}`,
+                }))}
+                activePeriodId={activePeriod.id}
+                routeId={isSummary ? undefined : routeQuery}
+                isSummary={isSummary}
               />
-              <button type="submit" className="btn btn-secondary py-1.5 text-xs">Tìm</button>
-              {query && (
-                <Link href={clearSearchHref} className="btn btn-secondary px-2 py-1.5 text-xs" title="Xóa lọc">×</Link>
-              )}
-            </form>
-          )}
+              <BillingRouteSelect
+                periodId={activePeriod.id}
+                routes={routes.map((r) => ({ id: r.id, name: r.name }))}
+                activeRouteId={isAll ? null : activeRoute?.id ?? null}
+                isSummary={isSummary}
+              />
+            </Suspense>
+            {!isSummary && (
+              <form method="get" className="flex items-end gap-1">
+                <input type="hidden" name="period" value={activePeriod.id} />
+                <input type="hidden" name="route" value={routeQuery} />
+                {statusFilter !== "all" && (
+                  <input type="hidden" name="status" value={statusFilter} />
+                )}
+                <input
+                  name="q"
+                  defaultValue={searchQuery ?? ""}
+                  placeholder="Tìm MKH, đồng hồ, tên…"
+                  className="input py-1.5 text-sm"
+                  style={{ width: "200px" }}
+                  aria-label="Tìm mã hộ, đồng hồ, tên"
+                />
+                <button type="submit" className="btn btn-secondary py-1.5 text-xs">
+                  Tìm
+                </button>
+                {query && (
+                  <Link
+                    href={clearSearchHref}
+                    className="btn btn-secondary px-2 py-1.5 text-xs"
+                    title="Xóa lọc"
+                  >
+                    ×
+                  </Link>
+                )}
+              </form>
+            )}
+          </div>
+          <div className="flex flex-wrap items-start gap-2">
+            {!isSummary && (
+              <BillingPrintPanel
+                periodId={activePeriod.id}
+                rows={filteredRows.map((r) => ({
+                  householdId: r.householdId,
+                  householdCode: r.householdCode,
+                  residentName: r.residentName,
+                  status: r.status,
+                }))}
+              />
+            )}
+            <BillingExcelPanel periodId={activePeriod.id} />
+          </div>
         </div>
-        <BillingExcelPanel periodId={activePeriod.id} />
-      </div>
 
-      {!isSummary && (activeRoute || isAll) && (
+        {!isSummary && (activeRoute || isAll) && (
         <div className="mb-3 flex flex-wrap gap-2">
           {statusTabs.map((tab) => {
             const href = billingHref({ status: tab.key });
@@ -224,9 +248,9 @@ export default async function BillingSheetPage({
             );
           })}
         </div>
-      )}
+        )}
 
-      {isSummary ? (
+        {isSummary ? (
         <BillingSheetSummary summaries={summaries} periodLabel={periodLabel} />
       ) : activeRoute || isAll ? (
         <BillingSheetGrid
@@ -236,22 +260,23 @@ export default async function BillingSheetPage({
           statusFilter={statusFilter}
           showRoute={isAll}
         />
-      ) : (
-        <p className="text-[var(--muted)]">
-          Chưa có khu vực thu.{" "}
-          <Link href="/admin/households" className="text-[var(--primary)] hover:underline">
-            Gán hộ vào khu vực
-          </Link>
-        </p>
-      )}
+        ) : (
+          <p className="text-[var(--muted)]">
+            Chưa có khu vực thu.{" "}
+            <Link href="/admin/households" className="text-[var(--primary)] hover:underline">
+              Gán hộ vào khu vực
+            </Link>
+          </p>
+        )}
 
-      <p className="mt-6 text-center text-xs text-[var(--muted)]">
-        <Link href="/admin/routes" className="hover:underline">
-          Sửa khu vực thu (tuyến)
-        </Link>
-        {" · "}
-        Xuất PDF từng hộ ở cột <strong>Hóa đơn</strong> trên bảng
-      </p>
+        <p className="mt-6 text-center text-xs text-[var(--muted)]">
+          <Link href="/admin/routes" className="hover:underline">
+            Sửa khu vực thu (tuyến)
+          </Link>
+          {" · "}
+          Tick chọn hàng · <strong>In hàng loạt</strong> hoặc cột <strong>Hóa đơn</strong> từng hộ
+        </p>
+      </BillingPrintSelectionProvider>
     </>
   );
 }

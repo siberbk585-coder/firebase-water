@@ -79,14 +79,18 @@ async function ensureBase(prisma: PrismaClient) {
 
   for (let i = 2; i >= 1; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const month = d.getMonth() + 1;
+    const isOlderClosed = i === 2;
     const p = await prisma.billingPeriod.upsert({
-      where: { year_month: { year: d.getFullYear(), month: d.getMonth() + 1 } },
+      where: { year_month: { year: d.getFullYear(), month } },
       create: {
         year: d.getFullYear(),
-        month: d.getMonth() + 1,
-        status: PeriodStatus.CLOSED,
+        month,
+        status: isOlderClosed ? PeriodStatus.CLOSED : PeriodStatus.OPEN,
       },
-      update: { status: PeriodStatus.CLOSED },
+      update: {
+        status: isOlderClosed ? PeriodStatus.CLOSED : PeriodStatus.OPEN,
+      },
     });
     periods.push(p);
   }
@@ -162,8 +166,13 @@ async function main() {
   const prisma = await createPrismaTiennuoc();
   try {
   const { priceGroups, routes, periods, current, passwordHash } = await ensureBase(prisma);
-  const closedPeriods = periods.filter((p) => p.id !== current.id);
+  const closedPeriods = periods
+    .filter((p) => p.id !== current.id)
+    .sort((a, b) => a.year - b.year || a.month - b.month);
+  const marchPeriod = closedPeriods[0];
+  const aprilPeriod = closedPeriods[1];
   const routeCount = routes.length;
+  let aprilOpenSlots = 8;
 
   const stats = {
     created: 0,
@@ -229,6 +238,16 @@ async function main() {
 
     for (const period of closedPeriods) {
       const usage = 9 + (i % 6);
+      const isMarch = marchPeriod && period.id === marchPeriod.id;
+      const isApril = aprilPeriod && period.id === aprilPeriod.id;
+      const skipAprilClose =
+        isApril && hStatus === HouseholdStatus.ACTIVE && aprilOpenSlots > 0;
+
+      if (skipAprilClose) {
+        aprilOpenSlots--;
+        continue;
+      }
+
       const confirmed = prev + usage;
       await prisma.meterReading.create({
         data: {
@@ -243,12 +262,15 @@ async function main() {
           anomalyFlags: "[]",
         },
       });
-      const invStatus =
-        i % 3 === 0
-          ? InvoiceStatus.PAID
-          : i % 3 === 1
-            ? InvoiceStatus.ISSUED
-            : InvoiceStatus.DRAFT;
+      const invStatus = isMarch
+        ? InvoiceStatus.PAID
+        : isApril
+          ? InvoiceStatus.ISSUED
+          : i % 3 === 0
+            ? InvoiceStatus.PAID
+            : i % 3 === 1
+              ? InvoiceStatus.ISSUED
+              : InvoiceStatus.DRAFT;
       await seedInvoice(prisma, household, period.id, usage, invStatus);
       prev = confirmed;
     }

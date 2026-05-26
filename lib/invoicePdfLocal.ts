@@ -10,7 +10,7 @@ import {
   postInvoicePdfToN8nWebhook,
 } from "./n8nInvoicePdf";
 import { saveBuffer } from "./storage";
-import { formatPeriod } from "./vi";
+import { formatPeriod, paymentMethodLabel } from "./vi";
 
 /** Đảm bảo có hóa đơn đã tính tổng tiền từ chỉ số đã chốt. */
 export async function ensureInvoiceForHouseholdPeriod(
@@ -72,11 +72,14 @@ export async function exportInvoicePdfLocal(invoiceId: string): Promise<{
     residentName: invoice.household.residentName,
     address: invoice.household.address,
     periodLabel,
+    periodMonth: invoice.period.month,
+    periodYear: invoice.period.year,
     oldReading: reading.oldReading,
     newReading: reading.confirmedValue,
     usageM3,
     unitPrice,
     totalAmount,
+    paymentMethod: paymentMethodLabel(invoice.household.paymentMethod),
     transferNote: buildTransferNote(
       invoice.household.meterCode,
       invoice.period.month,

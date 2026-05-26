@@ -6,6 +6,7 @@ import type { BillingSheetRow } from "@/lib/billingSheet";
 import { formatCurrency, previewBillingRow } from "@/lib/billing";
 import { readingStatusLabel } from "@/lib/vi";
 import { BillingSheetInvoiceBtn } from "@/components/BillingSheetInvoiceBtn";
+import { useBillingPrintSelectionOptional } from "@/components/billing-print-selection";
 
 export type ReadingStatusFilter = "all" | "pending" | "confirmed" | "rejected";
 
@@ -28,6 +29,7 @@ export function BillingSheetGrid({
   const [saving, setSaving] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const printSelection = useBillingPrintSelectionOptional();
 
   const filteredRows = useMemo(() => {
     if (statusFilter === "all") return localRows;
@@ -39,6 +41,18 @@ export function BillingSheetGrid({
     }
     return localRows.filter((r) => r.status === ReadingStatus.REJECTED);
   }, [localRows, statusFilter]);
+
+  const confirmedVisibleIds = useMemo(
+    () =>
+      filteredRows
+        .filter((r) => r.status === ReadingStatus.CONFIRMED)
+        .map((r) => r.householdId),
+    [filteredRows]
+  );
+
+  const allConfirmedSelected =
+    confirmedVisibleIds.length > 0 &&
+    confirmedVisibleIds.every((id) => printSelection?.selectedIds.has(id));
 
   const initDraft = useCallback((row: BillingSheetRow) => {
     if (row.csm != null) return String(row.csm);
@@ -286,6 +300,20 @@ export function BillingSheetGrid({
       <table className="table-modern billing-sheet-table min-w-[960px]">
         <thead className="sticky top-0 z-10 border-b bg-slate-100 text-left text-xs">
           <tr>
+            {printSelection && (
+              <th className="w-10 text-center" title="Chọn hộ để in hóa đơn">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300"
+                  checked={allConfirmedSelected}
+                  disabled={!confirmedVisibleIds.length}
+                  aria-label="Chọn tất cả hộ đã chốt trên bảng"
+                  onChange={() =>
+                    printSelection.toggleMany(confirmedVisibleIds, !allConfirmedSelected)
+                  }
+                />
+              </th>
+            )}
             <th className="w-10" title="Thứ tự trên tuyến">
               #
             </th>
@@ -337,6 +365,21 @@ export function BillingSheetGrid({
 
             return (
               <tr key={row.householdId} className={rowClass}>
+                {printSelection && (
+                  <td className="text-center">
+                    {row.status === ReadingStatus.CONFIRMED ? (
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        checked={printSelection.selectedIds.has(row.householdId)}
+                        aria-label={`Chọn in hóa đơn ${row.householdCode}`}
+                        onChange={() => printSelection.toggle(row.householdId)}
+                      />
+                    ) : (
+                      <span className="text-[var(--muted)]">—</span>
+                    )}
+                  </td>
+                )}
                 <td className="text-center text-[var(--muted)]">
                   {row.routeSortOrder ?? index + 1}
                 </td>
@@ -379,7 +422,7 @@ export function BillingSheetGrid({
                 <td className="text-right font-mono tabular-nums text-sm">
                   {preview.totalLabel}
                 </td>
-                <td className="text-center">
+                <td className="billing-invoice-cell text-center">
                   <BillingSheetInvoiceBtn
                     periodId={periodId}
                     householdId={row.householdId}

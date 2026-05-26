@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@fontsource/roboto-mono/400.css";
+@import "@fontsource/roboto-mono/700.css";
 
 :root {
   --background: #eef5f8;
@@ -204,4 +206,36 @@ a {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+/* Nút / ô hóa đơn — gợi máy in bill siêu thị */
+.billing-invoice-cell {
+  font-family: "Roboto Mono", "Courier New", ui-monospace, monospace;
+}
+
+.billing-receipt-action {
+  display: inline-flex;
+  align-items: center;
+  border: 1px dashed #94a3b8;
+  background: #f8fafc;
+  padding: 0.35rem 0.55rem;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #0f172a;
+  line-height: 1.2;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.billing-receipt-action:hover:not(:disabled) {
+  border-color: #0f766e;
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.billing-receipt-muted {
+  font-family: "Roboto Mono", "Courier New", ui-monospace, monospace;
+  letter-spacing: 0.06em;
 }
