@@ -19,7 +19,7 @@ const SVG_WIDTH = 560;
 const PAD = 24;
 const RIGHT = SVG_WIDTH - PAD;
 const MID = SVG_WIDTH / 2;
-const LINE_H = 26;
+const LINE_H = 22;
 
 export type InvoicePdfData = {
   invoiceCode: string;
@@ -72,15 +72,19 @@ function issuerName(): string {
 }
 
 function receiptDateTime(): string {
-  return new Intl.DateTimeFormat("vi-VN", {
+  const d = new Date();
+  const date = d.toLocaleDateString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+  });
+  const time = d.toLocaleTimeString("vi-VN", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
-  }).format(new Date());
+  });
+  return `${date} ${time}`;
 }
 
 function normalizeText(value: string): string {
@@ -122,21 +126,36 @@ function receiptText(
   return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="${RECEIPT_FONT}" font-size="${size}" font-weight="${weight}" fill="${fill}">${escapeXml(text)}</text>`;
 }
 
+type ReceiptLinesOpts = {
+  maxChars: number;
+  maxLines?: number;
+  size?: number;
+  weight?: number;
+  lineHeight?: number;
+  anchor?: "start" | "middle" | "end";
+};
+
 function receiptLines(
   x: number,
   y: number,
   text: string,
-  maxChars: number,
-  maxLines: number,
-  size = 20,
-  weight = 400,
-  lineHeight = LINE_H
+  opts: ReceiptLinesOpts
 ): { svg: string; height: number } {
+  const {
+    maxChars,
+    maxLines = 4,
+    size = 20,
+    weight = 400,
+    lineHeight = LINE_H,
+    anchor = "start",
+  } = opts;
   const lines = wrapText(text, maxChars, maxLines);
   const svg = lines
-    .map((line, i) => receiptText(x, y + i * lineHeight, line, { size, weight }))
+    .map((line, i) =>
+      receiptText(x, y + i * lineHeight, line, { size, weight, anchor })
+    )
     .join("");
-  return { svg, height: lines.length * lineHeight };
+  return { svg, height: Math.max(lines.length, 1) * lineHeight };
 }
 
 function dashedRule(y: number): string {
@@ -194,36 +213,48 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
     y += n;
   };
 
-  const issuer = receiptLines(MID, y, issuerName(), 38, 3, 22, 700, 28);
+  const issuer = receiptLines(MID, y, issuerName(), {
+    maxChars: 32,
+    maxLines: 3,
+    size: 20,
+    weight: 700,
+    lineHeight: 24,
+    anchor: "middle",
+  });
   push(issuer.svg);
   y += issuer.height;
-  gap(8);
+  gap(6);
 
   push(
     receiptText(MID, y, "BIÊN NHẬN THANH TOÁN", {
-      size: 24,
-      weight: 700,
-      anchor: "middle",
-    })
-  );
-  gap(28);
-  push(
-    receiptText(MID, y, periodCopyLabel(data), {
       size: 22,
       weight: 700,
       anchor: "middle",
     })
   );
-  gap(32);
+  gap(24);
+  push(
+    receiptText(MID, y, periodCopyLabel(data), {
+      size: 20,
+      weight: 700,
+      anchor: "middle",
+    })
+  );
+  gap(20);
 
   push(labelLine(y, "Tên KH:", data.residentName.toUpperCase()));
   gap(LINE_H);
   push(labelLine(y, "Mã KH:", data.householdCode));
   gap(LINE_H);
-  const addr = receiptLines(PAD, y, `Địa chỉ: ${data.address || "-"}`, 36, 3, 22, 20, 400);
+  const addr = receiptLines(PAD, y, `Địa chỉ: ${data.address || "-"}`, {
+    maxChars: 34,
+    maxLines: 4,
+    size: 20,
+    lineHeight: LINE_H,
+  });
   push(addr.svg);
   y += addr.height;
-  gap(20);
+  gap(8);
 
   push(labelLine(y, "NĐK: NCK:", ""));
   gap(LINE_H);
@@ -241,7 +272,7 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   );
   gap(LINE_H);
   push(labelLine(y, "SL Truy thu:", formatReceiptInt(arrears)));
-  gap(28);
+  gap(16);
 
   push(
     receiptText(MID, y, "SL(m³)  |  Đơn giá  |  Thành tiền", {
@@ -262,9 +293,9 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
       }
     )
   );
-  gap(28);
+  gap(16);
   push(dashedRule(y));
-  gap(24);
+  gap(14);
 
   push(receiptText(PAD, y, "Thuế GTGT:", { size: 20 }));
   push(
@@ -287,13 +318,18 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
 
   const words = amountInWordsVn(data.totalAmount);
   push(receiptText(PAD, y, "Bằng chữ:", { size: 20, weight: 700 }));
-  gap(22);
-  const wordsBlock = receiptLines(PAD, y, words, 36, 4, 22, 20, 400);
+  gap(LINE_H);
+  const wordsBlock = receiptLines(PAD, y, words, {
+    maxChars: 34,
+    maxLines: 3,
+    size: 20,
+    lineHeight: LINE_H,
+  });
   push(wordsBlock.svg);
   y += wordsBlock.height;
-  gap(24);
+  gap(12);
   push(dashedRule(y));
-  gap(24);
+  gap(12);
 
   const phones = data.contactPhones?.trim() || process.env.INVOICE_CONTACT_PHONES?.trim();
   if (phones) {
