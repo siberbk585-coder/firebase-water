@@ -1,6 +1,8 @@
-import { ReadingStatus } from "@/lib/types/enums";;
+import { ReadingStatus } from "@/lib/types/enums";
 import { prisma } from "./db";
 import { getBillingPeriods, getCollectionRoutes } from "./billingSheet";
+
+type RouteCountRow = { collectionRouteId: string; count: bigint };
 
 export async function getCurrentPeriodProgress(periodId?: string) {
   const periods = await getBillingPeriods();
@@ -9,47 +11,58 @@ export async function getCurrentPeriodProgress(periodId?: string) {
     : (periods.find((p) => p.status === "OPEN") ?? periods[0]);
   if (!current) return null;
 
-  const [totalActive, withReading, pending] = await Promise.all([
-    prisma.household.count({ where: { status: "ACTIVE" } }),
-    prisma.meterReading.count({
-      where: {
-        periodId: current.id,
-        household: { status: "ACTIVE" },
-        status: { in: [ReadingStatus.PENDING, ReadingStatus.CONFIRMED] },
-        OR: [
-          { confirmedValue: { not: null } },
-          { ocrValue: { not: null } },
-        ],
-      },
-    }),
-    prisma.meterReading.count({
-      where: { periodId: current.id, status: ReadingStatus.PENDING },
-    }),
-  ]);
-
   const routes = await getCollectionRoutes();
-  const routeProgress = await Promise.all(
-    routes.map(async (route) => {
-      const total = await prisma.household.count({
-        where: { status: "ACTIVE", collectionRouteId: route.id },
-      });
-      const recorded = await prisma.meterReading.count({
+
+  const [totalActive, withReading, pending, householdByRoute, recordedByRoute] =
+    await Promise.all([
+      prisma.household.count({ where: { status: "ACTIVE" } }),
+      prisma.meterReading.count({
         where: {
           periodId: current.id,
-          household: { collectionRouteId: route.id, status: "ACTIVE" },
-          confirmedValue: { not: null },
+          household: { status: "ACTIVE" },
           status: { in: [ReadingStatus.PENDING, ReadingStatus.CONFIRMED] },
+          OR: [{ confirmedValue: { not: null } }, { ocrValue: { not: null } }],
         },
-      });
-      return {
-        routeId: route.id,
-        routeName: route.name,
-        total,
-        recorded,
-        missing: Math.max(0, total - recorded),
-      };
-    })
+      }),
+      prisma.meterReading.count({
+        where: { periodId: current.id, status: ReadingStatus.PENDING },
+      }),
+      prisma.household.groupBy({
+        by: ["collectionRouteId"],
+        where: { status: "ACTIVE", collectionRouteId: { not: null } },
+        _count: { _all: true },
+      }),
+      prisma.$queryRaw<RouteCountRow[]>`
+        SELECT h.collection_route_id AS "collectionRouteId", COUNT(*)::bigint AS count
+        FROM meter_reading mr
+        INNER JOIN household h ON h.id = mr.household_id
+        WHERE mr.period_id = ${current.id}::uuid
+          AND h.status = 'ACTIVE'::household_status
+          AND h.collection_route_id IS NOT NULL
+          AND mr.confirmed_value IS NOT NULL
+          AND mr.status IN ('PENDING'::reading_status, 'CONFIRMED'::reading_status)
+        GROUP BY h.collection_route_id
+      `,
+    ]);
+
+  const totalByRoute = new Map(
+    householdByRoute.map((r) => [r.collectionRouteId!, r._count._all])
   );
+  const recordedMap = new Map(
+    recordedByRoute.map((r) => [r.collectionRouteId, Number(r.count)])
+  );
+
+  const routeProgress = routes.map((route) => {
+    const total = totalByRoute.get(route.id) ?? 0;
+    const recorded = recordedMap.get(route.id) ?? 0;
+    return {
+      routeId: route.id,
+      routeName: route.name,
+      total,
+      recorded,
+      missing: Math.max(0, total - recorded),
+    };
+  });
 
   const percent = totalActive > 0 ? Math.round((withReading / totalActive) * 100) : 0;
 

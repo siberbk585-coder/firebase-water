@@ -26,41 +26,19 @@ export default async function AdminDashboardPage({
   }
 
   const periodId = progress.period.id;
-  const [
-    confirmedReadings,
-    rejectedReadings,
-    invoiceCount,
-    issuedInvoices,
-    paidInvoices,
-    missingPdf,
-    invoiceTotal,
-    paidTotal,
-    waterUsage,
-  ] = await Promise.all([
-    prisma.meterReading.count({
-      where: { periodId, status: ReadingStatus.CONFIRMED },
-    }),
-    prisma.meterReading.count({
-      where: { periodId, status: ReadingStatus.REJECTED },
-    }),
-    prisma.invoice.count({ where: { periodId } }),
-    prisma.invoice.count({
-      where: { periodId, status: InvoiceStatus.ISSUED },
-    }),
-    prisma.invoice.count({
-      where: { periodId, status: InvoiceStatus.PAID },
-    }),
-    prisma.invoice.count({
-      where: { periodId, pdfPath: null },
-    }),
-    prisma.invoice.aggregate({
+  const [readingByStatus, invoiceByStatus, missingPdf, waterUsage] = await Promise.all([
+    prisma.meterReading.groupBy({
+      by: ["status"],
       where: { periodId },
+      _count: { _all: true },
+    }),
+    prisma.invoice.groupBy({
+      by: ["status"],
+      where: { periodId },
+      _count: { _all: true },
       _sum: { totalAmount: true },
     }),
-    prisma.invoice.aggregate({
-      where: { periodId, status: InvoiceStatus.PAID },
-      _sum: { totalAmount: true },
-    }),
+    prisma.invoice.count({ where: { periodId, pdfPath: null } }),
     loadMonthlyWaterUsage({
       id: progress.period.id,
       year: progress.period.year,
@@ -68,11 +46,25 @@ export default async function AdminDashboardPage({
     }),
   ]);
 
-  const missingReadings = Math.max(0, progress.totalActive - progress.withReading);
-  const remainingMoney = Math.max(
-    0,
-    (invoiceTotal._sum.totalAmount ?? 0) - (paidTotal._sum.totalAmount ?? 0)
+  const readingCount = (status: ReadingStatus) =>
+    readingByStatus.find((r) => r.status === status)?._count._all ?? 0;
+  const confirmedReadings = readingCount(ReadingStatus.CONFIRMED);
+  const rejectedReadings = readingCount(ReadingStatus.REJECTED);
+
+  const invoiceCount = invoiceByStatus.reduce((n, r) => n + r._count._all, 0);
+  const issuedInvoices =
+    invoiceByStatus.find((r) => r.status === InvoiceStatus.ISSUED)?._count._all ?? 0;
+  const paidInvoices =
+    invoiceByStatus.find((r) => r.status === InvoiceStatus.PAID)?._count._all ?? 0;
+  const invoiceTotalAmount = invoiceByStatus.reduce(
+    (sum, r) => sum + (r._sum.totalAmount ?? 0),
+    0
   );
+  const paidTotalAmount =
+    invoiceByStatus.find((r) => r.status === InvoiceStatus.PAID)?._sum.totalAmount ?? 0;
+
+  const missingReadings = Math.max(0, progress.totalActive - progress.withReading);
+  const remainingMoney = Math.max(0, invoiceTotalAmount - paidTotalAmount);
 
   return (
     <>
@@ -120,7 +112,7 @@ export default async function AdminDashboardPage({
         />
         <MetricCard
           label="Đã thu"
-          value={formatCurrency(paidTotal._sum.totalAmount ?? 0)}
+          value={formatCurrency(paidTotalAmount)}
           hint={`Còn ${formatCurrency(remainingMoney)}`}
           tone="pink"
         />
