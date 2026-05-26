@@ -4,9 +4,15 @@ import { formatCurrency } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { getCurrentPeriodProgress } from "@/lib/routeProgress";
 import { formatPeriod, periodStatusLabel } from "@/lib/vi";
+import { PeriodSelector } from "@/components/PeriodSelector";
 
-export default async function AdminDashboardPage() {
-  const progress = await getCurrentPeriodProgress();
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
+  const { period: selectedPeriodId } = await searchParams;
+  const progress = await getCurrentPeriodProgress(selectedPeriodId);
 
   if (!progress) {
     return (
@@ -71,18 +77,23 @@ export default async function AdminDashboardPage() {
   return (
     <>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Tổng quan thu tiền nước</h1>
-          <p className="text-sm text-[var(--muted)]">
-            {formatPeriod(progress.period.month, progress.period.year)} —{" "}
-            {periodStatusLabel(progress.period.status)}
-          </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Tổng quan thu tiền nước</h1>
+            <p className="text-sm text-[var(--muted)]">
+              {periodStatusLabel(progress.period.status)}
+            </p>
+          </div>
+          <PeriodSelector
+            periods={progress.allPeriods}
+            currentPeriodId={progress.period.id}
+          />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/admin/billing-sheet?route=all&status=pending" className="btn btn-primary">
+          <Link href={`/admin/billing-sheet?period=${progress.period.id}&route=all&status=pending`} className="btn btn-primary">
             Xử lý chờ chốt
           </Link>
-          <Link href="/admin/billing-sheet?route=all" className="btn btn-secondary">
+          <Link href={`/admin/billing-sheet?period=${progress.period.id}&route=all`} className="btn btn-secondary">
             Mở bảng thu
           </Link>
         </div>
@@ -166,7 +177,7 @@ export default async function AdminDashboardPage() {
             </p>
           </div>
           <span className="badge bg-[var(--primary-soft)] text-[var(--primary-dark)]">
-            {formatPeriod(progress.period.month, progress.period.year)}
+            {formatPeriod(progress.period.month, progress.period.year)} · {periodStatusLabel(progress.period.status)}
           </span>
         </div>
 

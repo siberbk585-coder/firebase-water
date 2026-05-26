@@ -19,21 +19,9 @@ const TTF_FILES: Record<number, string> = {
   900: "BeVietnamPro-Black.ttf",
 };
 
-/** Load TTF font buffers for resvg (resvg cần TTF, không phải woff). */
-let _fontBuffers: Buffer[] | null = null;
-function fontBuffers(): Buffer[] {
-  if (_fontBuffers) return _fontBuffers;
-  const bufs: Buffer[] = [];
-  for (const weight of FONT_WEIGHTS) {
-    const file = TTF_FILES[weight];
-    try {
-      bufs.push(readFileSync(join(TTF_BASE, file)));
-    } catch (e) {
-      console.warn(`[pdf] Missing font file: ${file}`, e);
-    }
-  }
-  _fontBuffers = bufs;
-  return bufs;
+/** Đường dẫn TTF cho resvg (API nhận fontFiles, không phải buffer). */
+function fontFilePaths(): string[] {
+  return FONT_WEIGHTS.map((weight) => join(TTF_BASE, TTF_FILES[weight]));
 }
 
 function loadFontFaceCSS(): string {
@@ -306,7 +294,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
   const svg = invoiceSvg(data, qrDataUri(qrBuffer));
   const resvg = new Resvg(svg, {
     font: {
-      fontBuffers: fontBuffers(),
+      fontFiles: fontFilePaths(),
       defaultFontFamily: "Be Vietnam Pro",
       loadSystemFonts: false,
     },

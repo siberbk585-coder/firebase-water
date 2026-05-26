@@ -114,7 +114,8 @@ export function entityLabel(entity: string): string {
 export function paymentMethodLabel(method: string): string {
   const map: Record<string, string> = {
     CASH: "Tiền mặt",
-    TRANSFER: "Chuyển khoản",
+    BANK_TRANSFER: "Chuyển khoản",
+    TRANSFER: "Chuyển khoản", // legacy alias
   };
   return map[method] ?? method;
 }

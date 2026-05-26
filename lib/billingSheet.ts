@@ -24,6 +24,7 @@ export type BillingSheetRow = {
   invoiceStatus: InvoiceStatus | null;
   pdfPath: string | null;
   paid: boolean;
+  paymentMethod: string | null;
 };
 
 export type RouteSummary = {
@@ -157,6 +158,7 @@ export async function loadBillingSheetRows(
       invoiceStatus: invoice?.status ?? null,
       pdfPath: invoice?.pdfPath ?? null,
       paid: invoice?.status === InvoiceStatus.PAID,
+      paymentMethod: invoice?.payment?.method ?? null,
     });
   }
   return rows;

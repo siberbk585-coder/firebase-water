@@ -280,6 +280,7 @@ export async function buildPeriodRouteWorkbook(periodId: string): Promise<XLSX.W
     "Tiêu thụ (m³)",
     "Tiền (VND)",
     "Đã thu (TT)",
+    "Hình thức TT",
   ];
 
   const guide = sheetFromRows([
@@ -292,6 +293,11 @@ export async function buildPeriodRouteWorkbook(periodId: string): Promise<XLSX.W
       "Cách dùng": "Chỉ sửa các cột bôi vàng",
       "Cột được sửa": "Đã thu (TT)",
       "Giá trị hợp lệ": "Nhập Đã thu, da thu, x, yes hoặc 1 để đánh dấu đã thanh toán",
+    },
+    {
+      "Cách dùng": "Chỉ sửa các cột bôi vàng",
+      "Cột được sửa": "Hình thức TT",
+      "Giá trị hợp lệ": "Tiền mặt / TM / cash  →  thu tiền mặt;  Chuyển khoản / CK / bank  →  chuyển khoản (mặc định nếu để trống)",
     },
     {
       "Cách dùng": "Không đổi MKH, CSC, tên hộ, tiền hoặc tên sheet",
@@ -329,6 +335,7 @@ export async function buildPeriodRouteWorkbook(periodId: string): Promise<XLSX.W
             ? 0
             : "",
       "Đã thu (TT)": r.paid ? "Đã thu" : r.invoiceId ? "Chưa" : "",
+      "Hình thức TT": r.paymentMethod ? paymentMethodLabel(r.paymentMethod) : "",
     }));
     const ws = sheetFromRows(sheetRows);
     applyHeaderStyle(ws);
@@ -347,6 +354,7 @@ export async function buildPeriodRouteWorkbook(periodId: string): Promise<XLSX.W
       { wch: 12 },
       { wch: 14 },
       { wch: 14 },
+      { wch: 16 },
     ];
     XLSX.utils.book_append_sheet(wb, ws, sheetNameSafe(`${route.name} (${periodTitle})`));
   }

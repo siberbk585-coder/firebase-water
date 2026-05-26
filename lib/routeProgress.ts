@@ -2,10 +2,11 @@ import { ReadingStatus } from "@/lib/types/enums";;
 import { prisma } from "./db";
 import { getBillingPeriods, getCollectionRoutes } from "./billingSheet";
 
-export async function getCurrentPeriodProgress() {
+export async function getCurrentPeriodProgress(periodId?: string) {
   const periods = await getBillingPeriods();
-  const current =
-    periods.find((p) => p.status === "OPEN") ?? periods[0];
+  const current = periodId
+    ? (periods.find((p) => p.id === periodId) ?? periods.find((p) => p.status === "OPEN") ?? periods[0])
+    : (periods.find((p) => p.status === "OPEN") ?? periods[0]);
   if (!current) return null;
 
   const [totalActive, withReading, pending] = await Promise.all([
@@ -54,6 +55,7 @@ export async function getCurrentPeriodProgress() {
 
   return {
     period: current,
+    allPeriods: periods,
     totalActive,
     withReading,
     pending,

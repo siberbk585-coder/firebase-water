@@ -4,6 +4,7 @@ import * as XLSX from "xlsx-js-style";
 import { calculateUsage } from "./billing";
 import { logAudit } from "./audit";
 import { prisma } from "@/lib/data/prisma";
+import { syncInvoiceForConfirmedReading } from "./invoices";
 
 type ImportRow = Record<string, unknown>;
 
@@ -20,6 +21,7 @@ type ParsedRow = {
   householdCode: string;
   csm: number | null;
   markPaid: boolean;
+  paymentMethod: PaymentMethod;
 };
 
 const BATCH_SIZE = 80;
@@ -43,6 +45,14 @@ function parseNumber(value: unknown): number | null {
 function isPaidMarker(value: unknown): boolean {
   const normalized = normalizeText(value);
   return ["da thu", "dathu", "x", "yes", "y", "true", "1"].includes(normalized);
+}
+
+function parsePaymentMethod(value: unknown): PaymentMethod {
+  const normalized = normalizeText(value);
+  if (["tien mat", "tienmat", "tm", "cash", "c"].includes(normalized)) {
+    return PaymentMethod.CASH;
+  }
+  return PaymentMethod.BANK_TRANSFER; // mặc định
 }
 
 function isDataSheet(name: string): boolean {
@@ -80,6 +90,7 @@ function parseWorkbookRows(buffer: Buffer): ParsedRow[] {
         householdCode,
         csm: parseNumber(row.CSM),
         markPaid: isPaidMarker(row["Đã thu (TT)"]),
+        paymentMethod: parsePaymentMethod(row["Hình thức TT"]),
       });
     }
   }
@@ -173,9 +184,11 @@ export async function importPeriodRouteWorkbook(params: {
 
   const ctx = await loadImportContext(params.periodId);
   const readingOps: Prisma.PrismaPromise<unknown>[] = [];
-  const paymentOps: Prisma.PrismaPromise<unknown>[] = [];
+  // householdId → line label + payment method (for phase 2)
+  const pendingPayments: Array<{ householdId: string; line: string; paymentMethod: PaymentMethod }> = [];
   const now = new Date();
 
+  // ── Phase 1: collect reading ops ────────────────────────────────────────────
   for (const row of rows) {
     const household = ctx.householdByCode.get(row.householdCode);
     if (!household) {
@@ -239,43 +252,77 @@ export async function importPeriodRouteWorkbook(params: {
     }
 
     if (row.markPaid) {
-      const invoice = ctx.invoiceByHousehold.get(household.id);
-      if (!invoice) {
-        result.errors.push(`${row.line}: chưa có hóa đơn để đánh dấu đã thu`);
-        continue;
-      }
-      paymentOps.push(
-        prisma.payment.upsert({
-          where: { invoiceId: invoice.id },
-          create: {
-            invoiceId: invoice.id,
-            amount: invoice.totalAmount,
-            method: PaymentMethod.BANK_TRANSFER,
-            note: "Import Excel",
-            confirmedAt: now,
-            confirmedById: params.actorId,
-          },
-          update: {
-            confirmedAt: now,
-            confirmedById: params.actorId,
-            method: PaymentMethod.BANK_TRANSFER,
-            note: "Import Excel",
-          },
-        })
-      );
-      paymentOps.push(
-        prisma.invoice.update({
-          where: { id: invoice.id },
-          data: { status: InvoiceStatus.PAID },
-        })
-      );
-      result.paymentUpdated++;
+      pendingPayments.push({ householdId: household.id, line: row.line, paymentMethod: row.paymentMethod });
     }
   }
 
+  // Flush reading ops trước — invoice cần reading CONFIRMED để tính tiền
   for (const batch of chunk(readingOps, BATCH_SIZE)) {
     await prisma.$transaction(batch);
   }
+
+  // ── Phase 2: sync invoices rồi mới mark paid ────────────────────────────────
+  const paymentOps: Prisma.PrismaPromise<unknown>[] = [];
+
+  for (const { householdId, line, paymentMethod } of pendingPayments) {
+    // Đảm bảo invoice tồn tại (tạo mới nếu chưa có, bỏ qua nếu đã PAID)
+    let invoice = await syncInvoiceForConfirmedReading(householdId, params.periodId);
+
+    // Nếu syncInvoice trả null, thử lấy invoice hiện có (có thể đã PAID trước đó)
+    if (!invoice) {
+      const existing = await prisma.invoice.findUnique({
+        where: { householdId_periodId: { householdId, periodId: params.periodId } },
+        select: { id: true, status: true, totalAmount: true },
+      });
+      if (existing) {
+        invoice = {
+          id: existing.id,
+          usageM3: 0,
+          unitPrice: 0,
+          totalAmount: existing.totalAmount,
+          status: existing.status as InvoiceStatus,
+        };
+      }
+    }
+
+    if (!invoice) {
+      result.errors.push(`${line}: không thể tạo hóa đơn (chưa có chỉ số đã chốt)`);
+      continue;
+    }
+    if (invoice.status === InvoiceStatus.PAID) {
+      // Đã thu rồi — bỏ qua, không tính lỗi
+      result.paymentUpdated++;
+      continue;
+    }
+
+    paymentOps.push(
+      prisma.payment.upsert({
+        where: { invoiceId: invoice.id },
+        create: {
+          invoiceId: invoice.id,
+          amount: invoice.totalAmount,
+          method: paymentMethod,
+          note: "Import Excel",
+          confirmedAt: now,
+          confirmedById: params.actorId,
+        },
+        update: {
+          confirmedAt: now,
+          confirmedById: params.actorId,
+          method: paymentMethod,
+          note: "Import Excel",
+        },
+      })
+    );
+    paymentOps.push(
+      prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { status: InvoiceStatus.PAID },
+      })
+    );
+    result.paymentUpdated++;
+  }
+
   for (const batch of chunk(paymentOps, BATCH_SIZE)) {
     await prisma.$transaction(batch);
   }
