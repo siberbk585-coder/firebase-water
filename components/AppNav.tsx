@@ -50,3 +50,54 @@ export function AppNav({ items }: { items: readonly { href: string; label: strin
     </div>
   );
 }
+
+function compactMobileLabel(label: string): string {
+  const map: Record<string, string> = {
+    "Tổng quan": "Tổng quan",
+    "Bảng thu nước": "Bảng thu",
+    "Thu tiền": "Thu tiền",
+    "Danh sách hộ": "Hộ dân",
+  };
+  return map[label] ?? label;
+}
+
+export function AppMobileNav({
+  items,
+}: {
+  items: readonly { href: string; label: string }[];
+}) {
+  const pathname = usePathname();
+  const columns = Math.max(1, items.length);
+
+  return (
+    <nav
+      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-white/95 px-2 pt-2 shadow-[0_-10px_30px_rgb(15_23_42_/_0.08)] backdrop-blur md:hidden"
+      aria-label="Menu chính trên điện thoại"
+    >
+      <div
+        className="mx-auto grid max-w-md gap-1"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      >
+        {items.map((item) => {
+          const active =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              prefetch
+              className={[
+                "flex min-h-12 items-center justify-center rounded-lg px-1.5 text-center text-[11px] font-bold leading-tight transition-colors",
+                active
+                  ? "bg-[var(--primary)] text-white shadow-sm"
+                  : "text-[var(--muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary-dark)]",
+              ].join(" ")}
+            >
+              {compactMobileLabel(item.label)}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}

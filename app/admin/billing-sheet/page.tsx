@@ -163,7 +163,7 @@ export default async function BillingSheetPage({
       {/* Hàng 2: Bộ lọc + In PDF + Excel */}
       <BillingPrintSelectionProvider>
         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="billing-mobile-filter-panel flex flex-wrap items-end gap-2 max-md:w-full max-md:flex-col max-md:items-stretch max-md:gap-2">
             <Suspense fallback={null}>
               <BillingPeriodSelect
                 periods={periods.map((p) => ({
@@ -182,7 +182,10 @@ export default async function BillingSheetPage({
               />
             </Suspense>
             {!isSummary && (
-              <form method="get" className="flex items-end gap-1">
+              <form
+                method="get"
+                className="billing-search-control flex items-end gap-1 max-md:grid max-md:w-full max-md:grid-cols-[minmax(0,1fr)_auto] max-md:items-stretch max-md:gap-2"
+              >
                 <input type="hidden" name="period" value={activePeriod.id} />
                 <input type="hidden" name="route" value={routeQuery} />
                 {statusFilter !== "all" && (
@@ -192,8 +195,7 @@ export default async function BillingSheetPage({
                   name="q"
                   defaultValue={searchQuery ?? ""}
                   placeholder="Tìm MKH, đồng hồ, tên…"
-                  className="input py-1.5 text-sm"
-                  style={{ width: "200px" }}
+                  className="input billing-search-input py-1.5 text-sm max-md:w-full"
                   aria-label="Tìm mã hộ, đồng hồ, tên"
                 />
                 <button type="submit" className="btn btn-secondary py-1.5 text-xs">
@@ -213,17 +215,21 @@ export default async function BillingSheetPage({
           </div>
           <div className="flex flex-wrap items-start gap-2">
             {!isSummary && (
-              <BillingPrintPanel
-                periodId={activePeriod.id}
-                rows={filteredRows.map((r) => ({
-                  householdId: r.householdId,
-                  householdCode: r.householdCode,
-                  residentName: r.residentName,
-                  status: r.status,
-                }))}
-              />
+              <div className="hidden md:block">
+                <BillingPrintPanel
+                  periodId={activePeriod.id}
+                  rows={filteredRows.map((r) => ({
+                    householdId: r.householdId,
+                    householdCode: r.householdCode,
+                    residentName: r.residentName,
+                    status: r.status,
+                  }))}
+                />
+              </div>
             )}
-            <BillingExcelPanel periodId={activePeriod.id} />
+            <div className="hidden md:block">
+              <BillingExcelPanel periodId={activePeriod.id} />
+            </div>
           </div>
         </div>
 
@@ -268,6 +274,21 @@ export default async function BillingSheetPage({
             </Link>
           </p>
         )}
+
+        <div className="mt-4 space-y-2 md:hidden">
+          {!isSummary && (
+            <BillingPrintPanel
+              periodId={activePeriod.id}
+              rows={filteredRows.map((r) => ({
+                householdId: r.householdId,
+                householdCode: r.householdCode,
+                residentName: r.residentName,
+                status: r.status,
+              }))}
+            />
+          )}
+          <BillingExcelPanel periodId={activePeriod.id} />
+        </div>
 
         <p className="mt-6 text-center text-xs text-[var(--muted)]">
           <Link href="/admin/routes" className="hover:underline">

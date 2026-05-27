@@ -36,10 +36,12 @@ export function BillingRouteSelect({
   const current = isSummary ? "summary" : activeRouteId === null ? "all" : activeRouteId;
 
   return (
-    <label className="flex items-center gap-2 text-sm">
-      <span className="shrink-0 font-medium text-[var(--muted)]">Khu vực:</span>
+    <label className="billing-filter-control flex items-center gap-2 text-sm max-md:flex-col max-md:items-stretch max-md:gap-1">
+      <span className="shrink-0 font-medium text-[var(--muted)] max-md:text-xs">
+        Khu vực
+      </span>
       <select
-        className="input min-w-[10rem] py-1.5"
+        className="input min-w-[10rem] py-1.5 max-md:w-full max-md:min-w-0"
         value={current}
         onChange={(e) => go(e.target.value)}
       >

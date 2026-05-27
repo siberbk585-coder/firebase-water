@@ -1,8 +1,15 @@
 import Link from "next/link";
 import type { SessionUser } from "@/lib/auth";
 import { appTitle, userRoleLabel } from "@/lib/vi";
-import { AppNav } from "@/components/AppNav";
+import { AppMobileNav, AppNav } from "@/components/AppNav";
 import { LogoutButton } from "@/components/LogoutButton";
+
+const ADMIN_MOBILE_NAV = new Set([
+  "/admin/dashboard",
+  "/admin/billing-sheet",
+  "/admin/payments",
+  "/admin/households",
+]);
 
 export function AppShell({
   user,
@@ -15,11 +22,14 @@ export function AppShell({
   nav: { href: string; label: string }[];
   headerActions?: React.ReactNode;
 }) {
+  const mobileNav =
+    user.role === "ADMIN" ? nav.filter((item) => ADMIN_MOBILE_NAV.has(item.href)) : nav;
+
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="flex h-14 items-center gap-3 sm:gap-4">
+        <div className="mx-auto max-w-7xl px-3 sm:px-4">
+          <div className="flex h-14 items-center gap-2 sm:gap-4">
             <Link
               href="/"
               className="group flex shrink-0 items-center gap-2.5 sm:gap-3"
@@ -39,13 +49,13 @@ export function AppShell({
             </Link>
 
             <nav
-              className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="hidden min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden"
               aria-label="Menu chính"
             >
               <AppNav items={nav} />
             </nav>
 
-            <div className="flex shrink-0 items-center gap-1.5 border-l border-[var(--border)] pl-2 sm:gap-2 sm:pl-3">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 border-l border-[var(--border)] pl-2 sm:gap-2 sm:pl-3">
               {headerActions}
               <div className="hidden text-right lg:block">
                 <div className="max-w-[8rem] truncate text-sm font-semibold text-[var(--foreground)] xl:max-w-[10rem]">
@@ -60,7 +70,10 @@ export function AppShell({
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl px-4 py-7">{children}</main>
+      <main className="mx-auto w-full max-w-7xl px-3 py-4 pb-24 sm:px-4 sm:py-7 md:pb-7">
+        {children}
+      </main>
+      <AppMobileNav items={mobileNav} />
     </div>
   );
 }

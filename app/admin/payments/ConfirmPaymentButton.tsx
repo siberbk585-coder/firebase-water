@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 export function ConfirmPaymentButton({
   invoiceId,
   method,
+  className = "",
 }: {
   invoiceId: string;
   method: "CASH" | "BANK_TRANSFER";
+  className?: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -26,7 +28,12 @@ export function ConfirmPaymentButton({
   }
 
   return (
-    <button type="button" className="btn btn-primary text-xs" onClick={confirm} disabled={loading}>
+    <button
+      type="button"
+      className={`btn btn-primary text-xs ${className}`}
+      onClick={confirm}
+      disabled={loading}
+    >
       {loading ? "..." : "Xác nhận TT"}
     </button>
   );

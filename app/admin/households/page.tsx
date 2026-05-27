@@ -50,21 +50,21 @@ export default async function AdminHouseholdsPage({
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Quản lý hộ dân</h1>
           <p className="text-sm text-[var(--muted)]">
             Trung tâm theo hộ — mỗi hộ một mã, một đồng hồ, lịch sử chỉ số trong chi tiết.
           </p>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end md:w-auto">
           <AddHouseholdModal routes={routes} />
-          <form className="flex gap-2" method="get">
+          <form className="flex w-full flex-col gap-2 sm:flex-row md:w-auto" method="get">
             <input
               name="q"
               defaultValue={q ?? ""}
               placeholder="Tìm mã hộ, đồng hồ, tên..."
-              className="input min-w-[220px]"
+              className="input md:min-w-[220px]"
             />
             <button type="submit" className="btn btn-secondary">
               Tìm
@@ -83,7 +83,81 @@ export default async function AdminHouseholdsPage({
         {total} hộ — trang {page}/{totalPages}
       </p>
 
-      <div className="overflow-x-auto card p-0">
+      <div className="space-y-3 md:hidden">
+        {households.map((h) => {
+          const latest = latestReading(h.readings);
+          const counts = readingCounts(h.readings);
+          return (
+            <article key={h.id} className="mobile-action-card">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link
+                    href={`/admin/households/${h.id}`}
+                    className="font-mono text-base font-bold text-[var(--primary-dark)] hover:underline"
+                  >
+                    {h.householdCode}
+                  </Link>
+                  <h2 className="mt-1 truncate text-sm font-semibold">{h.residentName}</h2>
+                  <p className="text-xs text-[var(--muted)]">{h.address}</p>
+                </div>
+                <span
+                  className={[
+                    "badge shrink-0",
+                    h.status === "ACTIVE" ? "badge-success" : "badge-danger",
+                  ].join(" ")}
+                >
+                  {householdStatusLabel(h.status)}
+                </span>
+              </div>
+
+              <div className="mobile-meta-grid">
+                <div>
+                  <span className="mobile-meta-label">Đồng hồ</span>
+                  <span className="font-mono font-semibold">{h.meterCode}</span>
+                </div>
+                <div>
+                  <span className="mobile-meta-label">SĐT</span>
+                  <span className="font-semibold">{h.user?.phone ?? "—"}</span>
+                </div>
+                <div>
+                  <span className="mobile-meta-label">Kỳ gần nhất</span>
+                  <span className="font-semibold">
+                    {latest ? formatPeriod(latest.period.month, latest.period.year) : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="mobile-meta-label">Chỉ số</span>
+                  <span className="font-semibold">
+                    {counts.total} kỳ
+                    {counts.pending > 0 ? ` · ${counts.pending} chờ` : ""}
+                  </span>
+                </div>
+              </div>
+
+              {latest && (
+                <p className="mt-3 text-xs text-[var(--muted)]">
+                  Trạng thái kỳ gần nhất:{" "}
+                  <strong>{readingStatusLabel(latest.status)}</strong>
+                </p>
+              )}
+
+              <Link
+                href={`/admin/households/${h.id}`}
+                className="btn btn-secondary mt-3 w-full text-sm"
+              >
+                Chi tiết
+              </Link>
+            </article>
+          );
+        })}
+        {!households.length && (
+          <div className="card text-center text-sm text-slate-500">
+            Không có hộ dân khớp điều kiện lọc.
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto card p-0 md:block">
         <table className="table-modern">
           <thead className="border-b bg-slate-50/70 text-left">
             <tr>
@@ -145,6 +219,13 @@ export default async function AdminHouseholdsPage({
                 </tr>
               );
             })}
+            {!households.length && (
+              <tr>
+                <td colSpan={7} className="p-6 text-center text-slate-500">
+                  Không có hộ dân khớp điều kiện lọc.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

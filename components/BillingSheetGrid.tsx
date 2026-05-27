@@ -287,6 +287,20 @@ export function BillingSheetGrid({
     if (next) inputRefs.current[next.householdId]?.focus();
   }
 
+  function getRowState(row: BillingSheetRow) {
+    const draft = getDraft(row.householdId, row);
+    const draftNum = draft === "" ? null : parseFloat(draft);
+    const preview =
+      draftNum != null && !Number.isNaN(draftNum)
+        ? previewBillingRow(row.oldReading, draftNum, row.unitPrice)
+        : row.csm != null
+          ? previewBillingRow(row.oldReading, row.csm, row.unitPrice)
+          : previewBillingRow(row.oldReading, null, row.unitPrice);
+    const missing = row.csm == null && draft === "";
+    const pending = row.status === ReadingStatus.PENDING;
+    return { draft, missing, pending, preview };
+  }
+
   if (!filteredRows.length) {
     return (
       <div className="card text-sm text-[var(--muted)]">
@@ -296,7 +310,208 @@ export function BillingSheetGrid({
   }
 
   return (
-    <div className="overflow-x-auto card p-0">
+    <>
+      <div className="space-y-3 md:hidden">
+        {printSelection && confirmedVisibleIds.length > 0 && (
+          <label className="mobile-action-card flex items-center justify-between gap-3 text-sm font-semibold">
+            <span>Chọn tất cả hộ đã chốt đang hiển thị</span>
+            <input
+              type="checkbox"
+              className="h-5 w-5 rounded border-slate-300"
+              checked={allConfirmedSelected}
+              aria-label="Chọn tất cả hộ đã chốt trên danh sách"
+              onChange={() =>
+                printSelection.toggleMany(confirmedVisibleIds, !allConfirmedSelected)
+              }
+            />
+          </label>
+        )}
+
+        {filteredRows.map((row, index) => {
+          const { draft, missing, pending, preview } = getRowState(row);
+          const cardClass = [
+            "mobile-action-card",
+            missing ? "border-amber-200 bg-amber-50/80" : "",
+            pending ? "border-sky-200 bg-sky-50/70" : "",
+            row.status === ReadingStatus.REJECTED ? "border-red-200 bg-red-50/70" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+
+          return (
+            <article key={row.householdId} className={cardClass}>
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-base font-bold text-[var(--foreground)]">
+                      {row.householdCode}
+                    </span>
+                    {row.status && (
+                      <span
+                        className={[
+                          "badge",
+                          row.status === ReadingStatus.CONFIRMED
+                            ? "badge-success"
+                            : row.status === ReadingStatus.PENDING
+                              ? "badge-warning"
+                              : "badge-danger",
+                        ].join(" ")}
+                      >
+                        {readingStatusLabel(row.status)}
+                      </span>
+                    )}
+                    {row.paid && <span className="badge badge-success">Đã thu</span>}
+                  </div>
+                  <h2 className="mt-1 truncate text-sm font-semibold">
+                    {row.residentName}
+                  </h2>
+                  <p className="text-xs text-[var(--muted)]">
+                    {showRoute && row.routeName ? `${row.routeName} · ` : ""}
+                    STT {row.routeSortOrder ?? index + 1} · ĐH {row.meterCode}
+                  </p>
+                </div>
+                {printSelection && row.status === ReadingStatus.CONFIRMED && (
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-5 w-5 shrink-0 rounded border-slate-300"
+                    checked={printSelection.selectedIds.has(row.householdId)}
+                    aria-label={`Chọn in hóa đơn ${row.householdCode}`}
+                    onChange={() => printSelection.toggle(row.householdId)}
+                  />
+                )}
+              </div>
+
+              <div className="mobile-meta-grid">
+                <div>
+                  <span className="mobile-meta-label">Số cũ</span>
+                  <span className="font-mono font-semibold tabular-nums">
+                    {row.oldReading}
+                  </span>
+                </div>
+                <div>
+                  <span className="mobile-meta-label">Số mới</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    className="input mt-1 py-2 text-right font-mono tabular-nums disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="—"
+                    value={draft}
+                    disabled={row.paid}
+                    title={row.paid ? "Đã xác nhận thu — không thể sửa chỉ số" : undefined}
+                    onChange={(e) => setDraft(row.householdId, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (pending) void approveRow(row);
+                        else void saveRow(row);
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <span className="mobile-meta-label">Tiêu thụ</span>
+                  <span className="font-mono font-semibold tabular-nums">
+                    {preview.usageM3 != null ? `${preview.usageM3} m³` : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="mobile-meta-label">Tiền</span>
+                  <span className="font-mono font-semibold tabular-nums">
+                    {preview.totalLabel}
+                  </span>
+                </div>
+              </div>
+
+              {errors[row.householdId] && (
+                <p className="mt-3 rounded-md bg-red-50 px-2 py-1.5 text-xs font-medium text-[var(--danger)]">
+                  {errors[row.householdId]}
+                </p>
+              )}
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {row.paid ? (
+                  <span className="btn btn-secondary col-span-2 cursor-default text-xs text-[var(--muted)]">
+                    Đã khóa chỉ số
+                  </span>
+                ) : pending ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-primary text-xs"
+                      disabled={saving === row.householdId}
+                      onClick={() => void approveRow(row)}
+                    >
+                      {saving === row.householdId ? "Đang chốt..." : "Chốt"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary text-xs"
+                      disabled={saving === row.householdId}
+                      onClick={() => void rejectRow(row)}
+                    >
+                      Từ chối
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-secondary col-span-2 text-xs"
+                    disabled={saving === row.householdId}
+                    onClick={() => void saveRow(row)}
+                  >
+                    {saving === row.householdId ? "Đang lưu..." : "Lưu chỉ số"}
+                  </button>
+                )}
+
+                <div className="billing-invoice-cell">
+                  <BillingSheetInvoiceBtn
+                    periodId={periodId}
+                    householdId={row.householdId}
+                    invoiceId={row.invoiceId}
+                    pdfPath={row.pdfPath}
+                    status={row.status}
+                  />
+                </div>
+
+                {row.paid ? (
+                  <span className="badge badge-success justify-center py-2">Đã thu</span>
+                ) : row.invoiceId ? (
+                  <button
+                    type="button"
+                    className="btn btn-mark-paid text-xs"
+                    disabled={saving === row.householdId}
+                    aria-label={`Xác nhận đã thu tiền hộ ${row.householdCode}`}
+                    onClick={() => void markPaid(row)}
+                  >
+                    {saving === row.householdId ? "Đang lưu..." : "Xác nhận thu"}
+                  </button>
+                ) : row.status === ReadingStatus.CONFIRMED ? (
+                  <span className="flex items-center justify-center rounded-lg border border-[var(--border)] px-2 text-center text-xs text-[var(--muted)]">
+                    Chưa có HĐ
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center rounded-lg border border-[var(--border)] px-2 text-center text-xs text-[var(--muted)]">
+                    Chưa chốt
+                  </span>
+                )}
+              </div>
+
+              {row.hasImage && row.imagePath && (
+                <a
+                  href={row.imagePath}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-[var(--primary-dark)] hover:underline"
+                >
+                  Xem ảnh đồng hồ
+                </a>
+              )}
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-x-auto card p-0 md:block">
       <table className="table-modern billing-sheet-table min-w-[960px]">
         <thead className="sticky top-0 z-10 border-b bg-slate-100 text-left text-xs">
           <tr>
@@ -523,6 +738,7 @@ export function BillingSheetGrid({
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }

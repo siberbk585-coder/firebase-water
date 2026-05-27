@@ -95,20 +95,20 @@ export default async function AdminPaymentsPage({
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Xác nhận thanh toán</h1>
           <p className="text-sm text-[var(--muted)]">
             Hóa đơn chưa thu — tìm theo mã hộ, đồng hồ hoặc tên chủ hộ.
           </p>
         </div>
-        <form className="flex gap-2" method="get">
+        <form className="flex w-full flex-col gap-2 sm:flex-row md:w-auto" method="get">
           {methodFilter && <input type="hidden" name="method" value={methodFilter} />}
           <input
             name="q"
             defaultValue={q ?? ""}
             placeholder="Tìm MKH, đồng hồ, tên hộ..."
-            className="input min-w-[220px]"
+            className="input md:min-w-[220px]"
           />
           <button type="submit" className="btn btn-secondary">
             Tìm
@@ -123,7 +123,7 @@ export default async function AdminPaymentsPage({
 
       {/* Nút gửi hàng loạt — chỉ hiện khi có hóa đơn chuyển khoản */}
       {bankCount > 0 && invoices.length > 0 && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+        <div className="mb-4 flex flex-col gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 sm:flex-row sm:items-center">
           <span className="text-sm text-blue-700">
             <strong>{bankCount}</strong> hóa đơn chờ thu qua chuyển khoản
           </span>
@@ -134,10 +134,10 @@ export default async function AdminPaymentsPage({
       )}
 
       {/* Filter tabs */}
-      <div className="mb-3 flex gap-2 text-sm">
+      <div className="mb-3 flex gap-2 overflow-x-auto pb-1 text-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <Link
           href={pageHref(1, null)}
-          className={`rounded-full px-3 py-1 font-medium transition-colors ${
+          className={`shrink-0 rounded-full px-3 py-1.5 font-medium transition-colors ${
             !methodFilter
               ? "bg-[var(--primary)] text-white"
               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -147,7 +147,7 @@ export default async function AdminPaymentsPage({
         </Link>
         <Link
           href={pageHref(1, "CASH")}
-          className={`rounded-full px-3 py-1 font-medium transition-colors ${
+          className={`shrink-0 rounded-full px-3 py-1.5 font-medium transition-colors ${
             methodFilter === "CASH"
               ? "bg-amber-500 text-white"
               : "bg-amber-50 text-amber-700 hover:bg-amber-100"
@@ -157,7 +157,7 @@ export default async function AdminPaymentsPage({
         </Link>
         <Link
           href={pageHref(1, "BANK_TRANSFER")}
-          className={`rounded-full px-3 py-1 font-medium transition-colors ${
+          className={`shrink-0 rounded-full px-3 py-1.5 font-medium transition-colors ${
             methodFilter === "BANK_TRANSFER"
               ? "bg-blue-600 text-white"
               : "bg-blue-50 text-blue-700 hover:bg-blue-100"
@@ -173,7 +173,91 @@ export default async function AdminPaymentsPage({
         {methodFilter ? ` · ${METHOD_LABEL[methodFilter]}` : ""} — trang {page}/{totalPages}
       </p>
 
-      <div className="overflow-x-auto card p-0">
+      <div className="space-y-3 md:hidden">
+        {invoices.map((inv) => {
+          const method = inv.household.paymentMethod as PaymentMethod;
+          return (
+            <article key={inv.id} className="mobile-action-card">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link
+                    href={`/admin/households/${inv.householdId}`}
+                    className="font-mono text-base font-bold text-[var(--primary-dark)] hover:underline"
+                  >
+                    {inv.household.householdCode}
+                  </Link>
+                  <h2 className="mt-1 truncate text-sm font-semibold">
+                    {inv.household.residentName}
+                  </h2>
+                  <p className="text-xs text-[var(--muted)]">
+                    {inv.household.address}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">
+                  {METHOD_LABEL[method]}
+                </span>
+              </div>
+
+              <div className="mobile-meta-grid">
+                <div>
+                  <span className="mobile-meta-label">Đồng hồ</span>
+                  <span className="font-mono font-semibold">{inv.household.meterCode}</span>
+                </div>
+                <div>
+                  <span className="mobile-meta-label">Kỳ</span>
+                  <span className="font-semibold">
+                    {formatPeriod(inv.period.month, inv.period.year)}
+                  </span>
+                </div>
+                <div>
+                  <span className="mobile-meta-label">Khu vực</span>
+                  <span className="font-semibold">
+                    {inv.household.collectionRoute?.name ?? "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="mobile-meta-label">Số tiền</span>
+                  <span className="font-mono font-bold tabular-nums">
+                    {formatCurrency(inv.totalAmount)}
+                  </span>
+                </div>
+              </div>
+
+              {inv.household.contactPhone && (
+                <p className="mt-3 text-xs text-[var(--muted)]">
+                  SĐT: {inv.household.contactPhone}
+                </p>
+              )}
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <PaymentMethodSelect householdId={inv.householdId} value={method} />
+                <SendStatusBadge
+                  invoiceId={inv.id}
+                  sendCount={inv._count.sendLogs}
+                  lastSentAt={inv.sendLogs[0]?.sentAt ?? null}
+                  paid={inv.status === InvoiceStatus.PAID}
+                  isBankTransfer={method === "BANK_TRANSFER"}
+                />
+              </div>
+
+              <ConfirmPaymentButton
+                invoiceId={inv.id}
+                method={method}
+                className="mt-3 w-full"
+              />
+            </article>
+          );
+        })}
+        {!invoices.length && (
+          <div className="card text-center text-sm text-slate-500">
+            {query || methodFilter
+              ? "Không có hóa đơn chờ thu khớp điều kiện lọc."
+              : "Không có hóa đơn chờ xác nhận."}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto card p-0 md:block">
         <table className="table-modern">
           <thead className="border-b bg-slate-50/70 text-left text-sm">
             <tr>

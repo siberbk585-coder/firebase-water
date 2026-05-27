@@ -34,10 +34,12 @@ export function BillingPeriodSelect({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <label className="text-sm font-medium">Kỳ:</label>
+    <div className="billing-filter-control flex items-center gap-2 max-md:flex-col max-md:items-stretch max-md:gap-1">
+      <label className="text-sm font-medium max-md:text-xs max-md:text-[var(--muted)]">
+        Kỳ
+      </label>
       <select
-        className="input py-1.5"
+        className="input py-1.5 max-md:w-full"
         value={activePeriodId}
         onChange={(e) => onChange(e.target.value)}
       >
