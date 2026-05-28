@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { openPdfBlob } from "@/lib/pdfBlobUi";
 
 export function ExportInvoiceButton({
   invoiceId,
@@ -25,9 +26,11 @@ export function ExportInvoiceButton({
         return;
       }
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank", "noopener,noreferrer");
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      openPdfBlob(blob, {
+        fileName: `hoa-don-${meterCode}.pdf`,
+        title: `Hóa đơn ${meterCode}`,
+        tryPrint: true,
+      });
       router.refresh();
     } catch {
       alert("Không tải được PDF");

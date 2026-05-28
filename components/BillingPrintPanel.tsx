@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ReadingStatus } from "@/lib/types/enums";
 import { useBillingPrintSelectionOptional } from "@/components/billing-print-selection";
+import { isRestrictedWebView, openPdfBlob } from "@/lib/pdfBlobUi";
 
 export type BillingPrintRow = {
   householdId: string;
@@ -37,11 +38,9 @@ export function BillingPrintPanel({ periodId, rows }: Props) {
   const batchTargets =
     selectedConfirmed.length > 0 ? selectedConfirmed : confirmedOnTable;
 
-  async function openPdfBlob(res: Response) {
+  async function openPdfResponse(res: Response, fileName = "hoa-don-gop.pdf") {
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "noopener,noreferrer");
-    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    openPdfBlob(blob, { fileName, title: "Hóa đơn gộp", tryPrint: !isRestrictedWebView() });
     router.refresh();
   }
 
@@ -75,7 +74,7 @@ export function BillingPrintPanel({ periodId, rows }: Props) {
       }
       const ok = res.headers.get("X-Invoice-Count");
       const err = res.headers.get("X-Invoice-Errors");
-      await openPdfBlob(res);
+      await openPdfResponse(res);
       if (err && Number(err) > 0) {
         alert(`Đã gộp ${ok ?? batchTargets.length} hóa đơn. ${err} hộ lỗi (chưa chốt hoặc thiếu dữ liệu).`);
       }
@@ -92,9 +91,16 @@ export function BillingPrintPanel({ periodId, rows }: Props) {
       alert("Không có hộ đã chốt trên bảng.");
       return;
     }
+    if (isRestrictedWebView()) {
+      alert(
+        "Trên app điện thoại, hãy dùng「In hàng loạt」(1 file PDF gộp) hoặc in từng hộ ở cột Hóa đơn."
+      );
+      return;
+    }
+
     if (
       !confirm(
-        `Mở lần lượt ${targets.length} tab PDF (từng hộ)?\nTrình duyệt có thể chặn popup — cho phép popup nếu cần.`
+        `Mở lần lượt ${targets.length} cửa sổ PDF (từng hộ)?\nTrên máy tính: cho phép popup nếu trình duyệt hỏi.`
       )
     ) {
       return;
@@ -116,11 +122,12 @@ export function BillingPrintPanel({ periodId, rows }: Props) {
             continue;
           }
           const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          window.open(url, "_blank", "noopener,noreferrer");
-          setTimeout(() => URL.revokeObjectURL(url), 120_000);
+          openPdfBlob(blob, {
+            fileName: `hoa-don-${row.householdCode}.pdf`,
+            title: `Hóa đơn ${row.householdCode}`,
+          });
           ok++;
-          await new Promise((r) => setTimeout(r, 400));
+          await new Promise((r) => setTimeout(r, 600));
         } catch {
           fail++;
         }
