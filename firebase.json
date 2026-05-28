@@ -61,5 +61,13 @@
   },
   "dataconnect": {
     "source": "dataconnect"
+  },
+  "appDistribution": {
+    "androidGroups": [
+      "testers"
+    ],
+    "iosGroups": [
+      "testers"
+    ]
   }
 }

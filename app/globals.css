@@ -3,6 +3,10 @@
 @import "@fontsource/roboto-mono/700.css";
 
 :root {
+  --app-safe-top: env(safe-area-inset-top, 0px);
+  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-safe-left: env(safe-area-inset-left, 0px);
+  --app-safe-right: env(safe-area-inset-right, 0px);
   --background: #eef5f8;
   --foreground: #202426;
   --muted: #6f7a82;
@@ -244,80 +248,12 @@ a {
   width: 200px;
 }
 
+.app-header {
+  top: var(--app-safe-top);
+}
+
 .mobile-bottom-nav {
-  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-}
-
-.mobile-preview body,
-body.mobile-preview {
-  max-width: 430px;
-  min-height: 100vh;
-  margin: 0 auto;
-  border-left: 1px solid var(--border);
-  border-right: 1px solid var(--border);
-  box-shadow: 0 0 50px rgb(15 23 42 / 0.12);
-}
-
-body.mobile-preview .md\:hidden {
-  display: block !important;
-}
-
-body.mobile-preview .hidden.md\:block,
-body.mobile-preview .md\:block {
-  display: none !important;
-}
-
-body.mobile-preview .sm\:flex-row,
-body.mobile-preview .md\:flex-row {
-  flex-direction: column !important;
-}
-
-body.mobile-preview .sm\:items-end,
-body.mobile-preview .md\:items-end {
-  align-items: stretch !important;
-}
-
-body.mobile-preview .md\:w-auto {
-  width: 100% !important;
-}
-
-body.mobile-preview .sm\:w-48 {
-  width: 100% !important;
-}
-
-body.mobile-preview .md\:min-w-\[220px\] {
-  min-width: 0 !important;
-}
-
-body.mobile-preview .billing-mobile-filter-panel {
-  display: grid !important;
-  width: 100% !important;
-  grid-template-columns: 1fr !important;
-  align-items: stretch !important;
-}
-
-body.mobile-preview .billing-filter-control {
-  display: flex !important;
-  width: 100% !important;
-  flex-direction: column !important;
-  align-items: stretch !important;
-  gap: 0.25rem !important;
-}
-
-body.mobile-preview .billing-filter-control select {
-  width: 100% !important;
-}
-
-body.mobile-preview .billing-search-control {
-  display: grid !important;
-  width: 100% !important;
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  align-items: stretch !important;
-  gap: 0.5rem !important;
-}
-
-body.mobile-preview .billing-search-input {
-  width: 100% !important;
+  padding-bottom: max(0.5rem, var(--app-safe-bottom));
 }
 
 @media (max-width: 767px) {

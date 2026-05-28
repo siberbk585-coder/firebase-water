@@ -4,6 +4,8 @@ Dự án độc lập **firebase-water** — ứng dụng vận hành thu tiền
 
 **Repository:** `git@github.com:siberbk585-coder/firebase-water.git`
 
+**App di động (APK):** phát triển trong repo riêng — xem [docs/MOBILE_APP.md](docs/MOBILE_APP.md). Repo này chỉ là web app.
+
 ---
 
 ## Mục lục

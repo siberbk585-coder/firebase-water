@@ -1,8 +1,9 @@
 import bcrypt from "bcryptjs";
 import { createHmac } from "crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/data/prisma";
 import { UserRole } from "@/lib/types/enums";
+import { resolveSessionFromIdToken } from "@/lib/firebaseAuth";
 import { env } from "./env";
 
 /** Firebase Hosting chỉ forward cookie `__session` tới Cloud Run (CDN). */
@@ -98,11 +99,13 @@ export async function clearSessionCookie(): Promise<void> {
   jar.delete(SESSION_COOKIE);
 }
 
-export async function getSession(): Promise<SessionUser | null> {
-  const jar = await cookies();
-  const raw = jar.get(SESSION_COOKIE)?.value;
-  if (!raw) return null;
-  const token = verify(raw);
+/** Token Bearer (cùng định dạng cookie đã ký) — dùng cho client gọi API ngoài trình duyệt. */
+export function createAccessToken(user: SessionUser): string {
+  return sign(encodeSession(user));
+}
+
+async function sessionFromSignedToken(signed: string): Promise<SessionUser | null> {
+  const token = verify(signed);
   if (!token) return null;
   const decoded = decodeSession(token);
   if (!decoded?.id) return null;
@@ -114,6 +117,42 @@ export async function getSession(): Promise<SessionUser | null> {
   if (!user) return null;
 
   return toSessionUser(user);
+}
+
+/** Bearer: session đã ký hoặc Firebase ID token (3 phần JWT). */
+export async function resolveBearerToken(bearer: string): Promise<SessionUser | null> {
+  const trimmed = bearer.trim();
+  if (!trimmed) return null;
+
+  const fromSigned = await sessionFromSignedToken(trimmed);
+  if (fromSigned) return fromSigned;
+
+  if (trimmed.split(".").length === 3) {
+    try {
+      return await resolveSessionFromIdToken(trimmed);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+export async function getSession(): Promise<SessionUser | null> {
+  const jar = await cookies();
+  const cookieRaw = jar.get(SESSION_COOKIE)?.value;
+  if (cookieRaw) {
+    const fromCookie = await sessionFromSignedToken(cookieRaw);
+    if (fromCookie) return fromCookie;
+  }
+
+  const h = await headers();
+  const auth = h.get("authorization");
+  if (auth?.toLowerCase().startsWith("bearer ")) {
+    return resolveBearerToken(auth.slice(7));
+  }
+
+  return null;
 }
 
 export function requireRole(user: SessionUser | null, role: UserRole): boolean {
