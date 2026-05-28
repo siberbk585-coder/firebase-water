@@ -20,9 +20,13 @@ export function middleware(request: NextRequest) {
   }
 
   const session = request.cookies.get("__session")?.value;
+  const hasBearer = request.headers
+    .get("authorization")
+    ?.toLowerCase()
+    .startsWith("bearer ");
   const isPublic = PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p));
 
-  if (!session && !isPublic && pathname !== "/") {
+  if (!session && !hasBearer && !isPublic && pathname !== "/") {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

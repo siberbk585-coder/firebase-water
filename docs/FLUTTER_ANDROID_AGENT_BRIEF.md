@@ -2,6 +2,8 @@
 
 Tài liệu này dùng để **giao việc cho một Agent khác** xây dựng app Android (Flutter) **trong repository riêng**, kết nối backend web hiện có. Đọc kỹ trước khi code.
 
+**Contract API backend (file riêng, copy sang repo app):** [ANDROID_BACKEND_API.md](./ANDROID_BACKEND_API.md)
+
 ---
 
 ## 1. Bối cảnh sản phẩm

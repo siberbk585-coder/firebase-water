@@ -1,5 +1,7 @@
 # Ứng dụng di động (APK) — tách khỏi repo web
 
+**Backend API (copy sang repo Android):** [ANDROID_BACKEND_API.md](./ANDROID_BACKEND_API.md)
+
 **Brief đầy đủ cho Agent xây Flutter:** [FLUTTER_ANDROID_AGENT_BRIEF.md](./FLUTTER_ANDROID_AGENT_BRIEF.md)
 
 Repo này chỉ chứa **web app Next.js** (https://tiennuoc.web.app).
