@@ -15,7 +15,10 @@ import {
 } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
 import { createPrismaTiennuoc } from "./prisma-tiennuoc";
+import { assertDestructiveAllowed } from "../lib/destructiveDbGuard";
 import bcrypt from "bcryptjs";
+
+assertDestructiveAllowed("firebase:seed-mock-50");
 import {
   COLLECTION_ROUTES,
   PRICE_GROUPS,

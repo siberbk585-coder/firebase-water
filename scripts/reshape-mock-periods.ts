@@ -16,6 +16,9 @@ import type { PrismaClient } from "@prisma/client";
 import { createPrismaTiennuoc } from "./prisma-tiennuoc";
 import { calculateTotal } from "../lib/billing";
 import { unitPriceForHousehold } from "../lib/routePricing";
+import { assertDestructiveAllowed } from "../lib/destructiveDbGuard";
+
+assertDestructiveAllowed("db:reshape-mock-periods");
 
 const YEAR = Number(process.env.MOCK_YEAR ?? new Date().getFullYear());
 const MARCH = 3;

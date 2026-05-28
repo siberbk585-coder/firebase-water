@@ -20,6 +20,7 @@ export function SubmitReadingClient({
   const [value, setValue] = useState(() => initialCsm ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   async function submit() {
     const confirmedValue = parseFloat(value);
@@ -34,6 +35,7 @@ export function SubmitReadingClient({
 
     setLoading(true);
     setError("");
+    setSuccess("");
     try {
       const fd = new FormData();
       fd.append("periodId", periodId);
@@ -47,7 +49,7 @@ export function SubmitReadingClient({
       }
       router.refresh();
       setValue("");
-      alert("Đã gửi chỉ số. Chờ tổ trưởng/kế toán chốt tháng này.");
+      setSuccess("Đã gửi chỉ số. Chờ tổ trưởng/kế toán chốt tháng này.");
     } catch {
       setError("Lỗi kết nối. Thử lại.");
     } finally {
@@ -97,6 +99,9 @@ export function SubmitReadingClient({
         {loading ? "Đang lưu..." : "Gửi chỉ số"}
       </button>
 
+      {success && (
+        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{success}</p>
+      )}
       {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
     </div>
   );

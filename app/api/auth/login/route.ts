@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { login, setSessionCookie } from "@/lib/auth";
+import { createAccessToken, login, setSessionCookie } from "@/lib/auth";
 import { z } from "zod";
 
 const schema = z.object({
@@ -20,5 +20,11 @@ export async function POST(request: Request) {
   }
 
   await setSessionCookie(user);
-  return NextResponse.json({ ok: true, role: user.role });
+  const token = createAccessToken(user);
+  return NextResponse.json({
+    ok: true,
+    role: user.role,
+    token,
+    user: { id: user.id, name: user.name, phone: user.phone, role: user.role },
+  });
 }

@@ -3,6 +3,9 @@
  */
 import { PrismaClient, ReadingStatus, UserRole, InputMethod } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { assertDestructiveAllowed } from "../lib/destructiveDbGuard";
+
+assertDestructiveAllowed("db:seed-test-residents");
 
 const prisma = new PrismaClient();
 const COUNT = 20;

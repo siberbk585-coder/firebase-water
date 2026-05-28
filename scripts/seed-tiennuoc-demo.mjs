@@ -2,6 +2,10 @@
 /**
  * Tạo admin + kỳ tháng hiện tại trên DB tiennuoc (cần DATABASE_URL).
  */
+import { assertDestructiveAllowed } from "../lib/destructiveDbGuard.ts";
+
+assertDestructiveAllowed("firebase:seed-demo");
+
 import { PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 

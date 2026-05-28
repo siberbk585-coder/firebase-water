@@ -17,6 +17,9 @@ import {
   randomAddress,
   randomResidentName,
 } from "../lib/seed-data";
+import { assertDestructiveAllowed } from "../lib/destructiveDbGuard";
+
+assertDestructiveAllowed("prisma/seed");
 
 const prisma = new PrismaClient();
 

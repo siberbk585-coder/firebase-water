@@ -27,7 +27,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75">
+      <header className="app-header sticky z-30 border-b border-[var(--border)] bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75">
         <div className="mx-auto max-w-7xl px-3 sm:px-4">
           <div className="flex h-14 items-center gap-2 sm:gap-4">
             <Link
@@ -49,7 +49,7 @@ export function AppShell({
             </Link>
 
             <nav
-              className="hidden min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden"
+              className="hidden min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] lg:block [&::-webkit-scrollbar]:hidden"
               aria-label="Menu chính"
             >
               <AppNav items={nav} />

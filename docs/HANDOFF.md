@@ -100,6 +100,7 @@ Chi tiết: [`FIREBASE_TIENNUOC.md`](./FIREBASE_TIENNUOC.md)
 | Đăng nhập OK API nhưng web đá về `/login` | Cookie phải là `__session`; xóa cookie cũ / tab ẩn danh |
 | API **500** sau deploy | `npm run firebase:post-deploy` |
 | Script DB lỗi bảng sai | `unset DATABASE_URL` trước khi chạy seed/provision |
+| **Không ghi đè production** | Xem [DATA_PRODUCTION_POLICY.md](./DATA_PRODUCTION_POLICY.md); `npm run db:audit` |
 | Upload ảnh lỗi production | Chưa set `UPLOAD_API_KEY` + `N8N_IMAGE_WEBHOOK_URL` (Drive gác) |
 
 ---

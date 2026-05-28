@@ -42,6 +42,8 @@
 | Đã xác nhận | Đã chốt — dùng tính cước |
 | Từ chối | Hộ gửi lại được |
 
+**Chốt kỳ liên tiếp:** Không chốt tháng N nếu tháng N−1 chưa **Đã xác nhận** (ví dụ không chốt T5 khi T4 chưa chốt). Hóa đơn T4 đã phát nhưng **chưa thu** vẫn được chốt T5 bình thường.
+
 ## Liên kết nhanh (admin)
 
 - Chờ chốt: `/admin/billing-sheet?status=pending`

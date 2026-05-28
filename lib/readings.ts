@@ -6,6 +6,7 @@ import { buildImageFilename } from "./filename";
 import { uploadReadingImageViaN8n } from "./imageUpload";
 import { logAudit } from "./audit";
 import { meterReadingAuditMetadata } from "./auditDisplay";
+import { assertPriorPeriodReadingConfirmed } from "./periodChain";
 
 export async function getAvgUsage3Months(
   householdId: string,
@@ -67,6 +68,8 @@ export async function confirmReading(params: {
     where: { id: params.readingId },
     include: { household: true, period: true },
   });
+
+  await assertPriorPeriodReadingConfirmed(reading.householdId, reading.period);
 
   const avg = await getAvgUsage3Months(reading.householdId, reading.periodId);
   const anomaly = detectAnomalies({

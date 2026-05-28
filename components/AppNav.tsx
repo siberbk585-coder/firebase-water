@@ -71,7 +71,7 @@ export function AppMobileNav({
 
   return (
     <nav
-      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-white/95 px-2 pt-2 shadow-[0_-10px_30px_rgb(15_23_42_/_0.08)] backdrop-blur md:hidden"
+      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-white/95 px-2 pt-2 shadow-[0_-10px_30px_rgb(15_23_42_/_0.08)] backdrop-blur lg:hidden"
       aria-label="Menu chính trên điện thoại"
     >
       <div

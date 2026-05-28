@@ -19,7 +19,7 @@ export default async function AdminDashboardPage({
       <div className="card">
         <h1 className="mb-2 text-2xl font-bold">Tổng quan thu tiền nước</h1>
         <p className="text-sm text-[var(--muted)]">
-          Chưa có kỳ thu. Hãy tạo kỳ trong database hoặc chạy seed trước khi vận hành.
+          Chưa có kỳ thu. Tạo kỳ thu trong mục quản trị hoặc liên hệ quản trị hệ thống.
         </p>
       </div>
     );

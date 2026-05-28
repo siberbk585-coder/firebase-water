@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { setSessionCookie } from "@/lib/auth";
+import { createAccessToken, setSessionCookie } from "@/lib/auth";
 import { resolveSessionFromIdToken } from "@/lib/firebaseAuth";
 import { z } from "zod";
 
@@ -24,7 +24,13 @@ export async function POST(request: Request) {
       );
     }
     await setSessionCookie(user);
-    return NextResponse.json({ ok: true, role: user.role });
+    const token = createAccessToken(user);
+    return NextResponse.json({
+      ok: true,
+      role: user.role,
+      token,
+      user: { id: user.id, name: user.name, phone: user.phone, role: user.role },
+    });
   } catch (e) {
     console.error("auth/session", e);
     return NextResponse.json({ error: "Token không hợp lệ" }, { status: 401 });

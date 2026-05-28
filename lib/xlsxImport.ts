@@ -5,6 +5,7 @@ import { calculateUsage } from "./billing";
 import { logAudit } from "./audit";
 import { prisma } from "@/lib/data/prisma";
 import { syncInvoiceForConfirmedReading } from "./invoices";
+import { assertPriorPeriodReadingConfirmed } from "./periodChain";
 
 type ImportRow = Record<string, unknown>;
 
@@ -159,7 +160,13 @@ async function loadImportContext(periodId: string) {
     return meter ? meterCodeFallback(meter) : 100;
   }
 
-  return { householdByCode, readingByHousehold, invoiceByHousehold, resolveOldReading };
+  return {
+    period,
+    householdByCode,
+    readingByHousehold,
+    invoiceByHousehold,
+    resolveOldReading,
+  };
 }
 
 export async function importPeriodRouteWorkbook(params: {
@@ -202,6 +209,14 @@ export async function importPeriodRouteWorkbook(params: {
     }
 
     if (row.csm != null) {
+      try {
+        await assertPriorPeriodReadingConfirmed(household.id, ctx.period);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Chưa chốt kỳ trước";
+        result.errors.push(`${row.line}: ${msg}`);
+        continue;
+      }
+
       const existing = ctx.readingByHousehold.get(household.id);
       const oldReading = ctx.resolveOldReading(household.id, existing?.oldReading);
       if (row.csm < oldReading) {

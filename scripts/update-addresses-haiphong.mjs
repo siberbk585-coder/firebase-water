@@ -5,6 +5,10 @@
  *   unset DATABASE_URL
  *   npm run db:update-addresses-haiphong
  */
+import { assertDestructiveAllowed } from "../lib/destructiveDbGuard.ts";
+
+assertDestructiveAllowed("db:update-addresses-haiphong");
+
 import { createPrismaTiennuoc } from "./prisma-tiennuoc.ts";
 import { randomAddress } from "../lib/seed-data.ts";
 

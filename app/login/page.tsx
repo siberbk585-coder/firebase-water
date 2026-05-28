@@ -7,7 +7,7 @@ export default async function LoginPage() {
   if (session) redirect("/");
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center px-4 pb-10 pt-[calc(2.5rem+var(--app-safe-top))]">
       <div className="card w-full max-w-md border-white/80 bg-white/90 backdrop-blur">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>

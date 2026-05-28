@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import type { BillingSheetRow } from "@/lib/billingSheet";
 import { formatCurrency, previewBillingRow } from "@/lib/billing";
@@ -28,8 +28,19 @@ export function BillingSheetGrid({
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [savedHint, setSavedHint] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const printSelection = useBillingPrintSelectionOptional();
+
+  useEffect(() => {
+    setLocalRows(rows);
+  }, [rows]);
+
+  useEffect(() => {
+    if (!savedHint) return;
+    const t = window.setTimeout(() => setSavedHint(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [savedHint]);
 
   const filteredRows = useMemo(() => {
     if (statusFilter === "all") return localRows;
@@ -87,6 +98,7 @@ export function BillingSheetGrid({
       id: string;
       totalAmount: number;
       usageM3: number;
+      status?: InvoiceStatus;
     } | null
   ) {
     const csm = reading.confirmedValue ?? 0;
@@ -102,9 +114,16 @@ export function BillingSheetGrid({
               usageM3: invoice?.usageM3 ?? reading.usageM3 ?? preview.usageM3,
               totalAmount: invoice?.totalAmount ?? preview.totalAmount,
               invoiceId: invoice?.id ?? r.invoiceId,
+              invoiceStatus: invoice?.status ?? r.invoiceStatus,
             }
           : r
       )
+    );
+  }
+
+  function patchRow(householdId: string, patch: Partial<BillingSheetRow>) {
+    setLocalRows((prev) =>
+      prev.map((r) => (r.householdId === householdId ? { ...r, ...patch } : r))
     );
   }
 
@@ -151,6 +170,7 @@ export function BillingSheetGrid({
         delete next[row.householdId];
         return next;
       });
+      setSavedHint(`Đã lưu chỉ số hộ ${row.householdCode}`);
     } catch {
       setErrors((e) => ({ ...e, [row.householdId]: "Lỗi kết nối" }));
     } finally {
@@ -196,6 +216,7 @@ export function BillingSheetGrid({
         delete next[row.householdId];
         return next;
       });
+      setSavedHint(`Đã chốt chỉ số hộ ${row.householdCode}`);
     } catch {
       setErrors((e) => ({ ...e, [row.householdId]: "Lỗi kết nối" }));
     } finally {
@@ -244,6 +265,7 @@ export function BillingSheetGrid({
             : r
         )
       );
+      setSavedHint(`Đã ghi nhận thu tiền hộ ${row.householdCode}`);
     } catch {
       setErrors((e) => ({ ...e, [row.householdId]: "Lỗi kết nối" }));
     } finally {
@@ -270,10 +292,19 @@ export function BillingSheetGrid({
       setLocalRows((prev) =>
         prev.map((r) =>
           r.householdId === row.householdId
-            ? { ...r, status: ReadingStatus.REJECTED, usageM3: null, totalAmount: null }
+            ? {
+                ...r,
+                status: ReadingStatus.REJECTED,
+                usageM3: null,
+                totalAmount: null,
+                invoiceId: null,
+                invoiceStatus: null,
+                pdfPath: null,
+              }
             : r
         )
       );
+      setSavedHint(`Đã từ chối chỉ số hộ ${row.householdCode}`);
     } catch {
       setErrors((e) => ({ ...e, [row.householdId]: "Lỗi kết nối" }));
     } finally {
@@ -311,6 +342,14 @@ export function BillingSheetGrid({
 
   return (
     <>
+      {savedHint && (
+        <p
+          className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900"
+          role="status"
+        >
+          {savedHint}
+        </p>
+      )}
       <div className="space-y-3 md:hidden">
         {printSelection && confirmedVisibleIds.length > 0 && (
           <label className="mobile-action-card flex items-center justify-between gap-3 text-sm font-semibold">
@@ -470,6 +509,12 @@ export function BillingSheetGrid({
                     invoiceId={row.invoiceId}
                     pdfPath={row.pdfPath}
                     status={row.status}
+                    onInvoiceCreated={(invoiceId) =>
+                      patchRow(row.householdId, {
+                        invoiceId,
+                        invoiceStatus: InvoiceStatus.ISSUED,
+                      })
+                    }
                   />
                 </div>
 
@@ -644,6 +689,12 @@ export function BillingSheetGrid({
                     invoiceId={row.invoiceId}
                     pdfPath={row.pdfPath}
                     status={row.status}
+                    onInvoiceCreated={(invoiceId) =>
+                      patchRow(row.householdId, {
+                        invoiceId,
+                        invoiceStatus: InvoiceStatus.ISSUED,
+                      })
+                    }
                   />
                 </td>
                 <td className="space-y-1 text-center text-xs">
