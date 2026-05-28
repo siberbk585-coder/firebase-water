@@ -127,8 +127,8 @@ export async function submitManualReading(params: {
 
   const oldReading = await getOldReading(params.householdId, params.periodId);
 
-  if (params.confirmedValue < oldReading) {
-    throw new Error(`CSM phải ≥ CSC (${oldReading})`);
+  if (params.confirmedValue <= oldReading) {
+    throw new Error(`CSM phải cao hơn CSC (${oldReading})`);
   }
 
   let imagePath: string | undefined;

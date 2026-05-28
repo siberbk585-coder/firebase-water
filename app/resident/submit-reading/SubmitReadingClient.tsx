@@ -28,8 +28,8 @@ export function SubmitReadingClient({
       setError("Nhập CSM hợp lệ (số dương).");
       return;
     }
-    if (confirmedValue < oldReading) {
-      setError(`CSM phải ≥ CSC (${oldReading}).`);
+    if (confirmedValue <= oldReading) {
+      setError(`CSM phải cao hơn CSC (${oldReading}).`);
       return;
     }
 
@@ -83,7 +83,7 @@ export function SubmitReadingClient({
           className="input"
           type="number"
           step="0.01"
-          min={oldReading}
+          min={oldReading + 1}
           placeholder={`Ví dụ: ${oldReading + 10}`}
           value={value ?? ""}
           onChange={(e) => setValue(e.target.value)}

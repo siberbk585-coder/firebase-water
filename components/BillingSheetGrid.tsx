@@ -134,10 +134,10 @@ export function BillingSheetGrid({
       setErrors((e) => ({ ...e, [row.householdId]: "Nhập CSM hợp lệ" }));
       return;
     }
-    if (confirmedValue < row.oldReading) {
+    if (confirmedValue <= row.oldReading) {
       setErrors((e) => ({
         ...e,
-        [row.householdId]: `CSM phải ≥ CSC (${row.oldReading})`,
+        [row.householdId]: `CSM phải cao hơn CSC (${row.oldReading})`,
       }));
       return;
     }

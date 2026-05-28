@@ -5,6 +5,7 @@ import {
   formatMeterReadingAuditDetail,
   isEmptyAuditMetadata,
 } from "@/lib/auditDisplay";
+import { formatDateTimeVN } from "@/lib/datetime";
 import {
   auditActionLabel,
   entityLabel,
@@ -12,13 +13,6 @@ import {
 } from "@/lib/vi";
 
 const PAGE_SIZE = 50;
-
-function formatWhen(d: Date): string {
-  return d.toLocaleString("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "medium",
-  });
-}
 
 export default async function AuditLogPage({
   searchParams,
@@ -110,7 +104,8 @@ export default async function AuditLogPage({
         <div>
           <h1 className="text-2xl font-bold">Nhật ký hệ thống</h1>
           <p className="text-sm text-[var(--muted)]">
-            Lịch sử thao tác: gửi/chốt chỉ số, hóa đơn, Excel, thanh toán…
+            Lịch sử thao tác: gửi/chốt chỉ số, hóa đơn, Excel, thanh toán… · Giờ
+            hiển thị GMT+7
           </p>
         </div>
         <p className="text-sm text-[var(--muted)]">
@@ -160,7 +155,7 @@ export default async function AuditLogPage({
             {logRows.map(({ log, detail }) => (
               <tr key={log.id} className="border-b text-sm">
                 <td className="whitespace-nowrap text-[var(--muted)]">
-                  {formatWhen(log.createdAt)}
+                  {formatDateTimeVN(log.createdAt)}
                 </td>
                 <td>
                   {log.actor ? (

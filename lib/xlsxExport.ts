@@ -3,6 +3,7 @@ import * as XLSX from "xlsx-js-style";
 import { parseAnomalyFlags } from "./anomaly";
 import { loadBillingSheetRows, loadRouteSummaries } from "./billingSheet";
 import { prisma } from "./db";
+import { formatDateTimeVN } from "./datetime";
 import {
   anomalyLabel,
   auditActionLabel,
@@ -60,8 +61,7 @@ function highlightEditableColumns(ws: XLSX.WorkSheet, headers: string[]) {
 }
 
 function formatDate(d: Date | null | undefined): string {
-  if (!d) return "";
-  return d.toLocaleString("vi-VN");
+  return formatDateTimeVN(d);
 }
 
 export async function buildFullExportWorkbook(): Promise<XLSX.WorkBook> {
@@ -121,7 +121,7 @@ export async function buildFullExportWorkbook(): Promise<XLSX.WorkBook> {
     { "Chỉ tiêu": "Hóa đơn đã thanh toán", "Giá trị": paidInvoices },
     { "Chỉ tiêu": "Tổng tiền đã thu (VND)", "Giá trị": totalRevenue },
     { "Chỉ tiêu": "Tổng tiền chưa thu (VND)", "Giá trị": totalOutstanding },
-    { "Chỉ tiêu": "Ngày xuất file", "Giá trị": new Date().toLocaleString("vi-VN") },
+    { "Chỉ tiêu": "Ngày xuất file", "Giá trị": formatDateTimeVN(new Date()) },
   ];
   XLSX.utils.book_append_sheet(wb, sheetFromRows(summaryRows), "Tong_quan");
 
