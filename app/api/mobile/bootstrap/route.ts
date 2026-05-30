@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getBillingPeriods, getCollectionRoutes } from "@/lib/billingSheet";
+import { currentCalendarPeriod, getBillingPeriods, getCollectionRoutes } from "@/lib/billingSheet";
 import { formatPeriod } from "@/lib/vi";
 import { UserRole } from "@/lib/types/enums";
 
@@ -15,7 +15,11 @@ export async function GET() {
     getCollectionRoutes(),
   ]);
 
-  const openPeriod = periods.find((p) => p.status === "OPEN") ?? periods[0];
+  const cal = currentCalendarPeriod();
+  const openPeriod =
+    periods.find((p) => p.year === cal.year && p.month === cal.month) ??
+    periods.find((p) => p.status === "OPEN") ??
+    periods[0];
 
   return NextResponse.json({
     user: {

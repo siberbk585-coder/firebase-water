@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Prisma, PaymentMethod, UserRole, InvoiceStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { enrollHouseholdInOpenPeriods } from "@/lib/billingPeriods";
 import { requireAdmin } from "@/lib/guards";
 import { logAudit } from "@/lib/audit";
 
@@ -93,11 +94,6 @@ export async function createHousehold(formData: FormData): Promise<void> {
     }
   }
 
-  const currentPeriod = await prisma.billingPeriod.findFirst({
-    where: { status: "OPEN" },
-    orderBy: [{ year: "desc" }, { month: "desc" }],
-  });
-
   try {
     const household = await prisma.household.create({
       data: {
@@ -113,20 +109,7 @@ export async function createHousehold(formData: FormData): Promise<void> {
       },
     });
 
-    if (currentPeriod) {
-      await prisma.meterReading.create({
-        data: {
-          householdId: household.id,
-          periodId: currentPeriod.id,
-          oldReading: 0,
-          confirmedValue: 0,
-          usageM3: 0,
-          inputMethod: "MANUAL",
-          status: "CONFIRMED",
-          confirmedAt: new Date(),
-        },
-      });
-    }
+    await enrollHouseholdInOpenPeriods(household.id);
 
     await logAudit({
       actorId: admin.id,

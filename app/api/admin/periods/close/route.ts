@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { periodAuditMetadata } from "@/lib/auditDisplay";
+import { ensureCurrentBillingPeriod } from "@/lib/billingPeriods";
 
 const schema = z.object({ periodId: z.string() });
 
@@ -41,6 +42,8 @@ export async function POST(request: Request) {
     entityId: period.id,
     metadata: periodAuditMetadata(period),
   });
+
+  await ensureCurrentBillingPeriod();
 
   revalidatePath("/admin/billing-sheet");
   revalidatePath("/admin/dashboard");

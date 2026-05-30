@@ -44,6 +44,12 @@
 
 **Chốt kỳ liên tiếp:** Không chốt tháng N nếu tháng N−1 chưa **Đã xác nhận** (ví dụ không chốt T5 khi T4 chưa chốt). Hóa đơn T4 đã phát nhưng **chưa thu** vẫn được chốt T5 bình thường.
 
+## Kỳ thu tự động
+
+- Hệ thống **tự tạo kỳ tháng hiện tại** (theo giờ `Asia/Ho_Chi_Minh`) khi mở bảng thu, tổng quan hoặc app mobile.
+- Mọi hộ **Đang sử dụng** được gắn bản ghi chỉ số `PENDING` vào **mọi kỳ đang OPEN** (CSC lấy từ kỳ trước đã chốt).
+- Hộ mới tạo được gắn vào các kỳ OPEN hiện có; không tự thêm vào kỳ đã **CLOSED**.
+
 ## Liên kết nhanh (admin)
 
 - Chờ chốt: `/admin/billing-sheet?status=pending`

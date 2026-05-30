@@ -1,5 +1,7 @@
 import { requireResident } from "@/lib/guards";
 import { prisma } from "@/lib/db";
+import { currentCalendarPeriod, getBillingPeriods } from "@/lib/billingSheet";
+import { enrollHouseholdInOpenPeriods } from "@/lib/billingPeriods";
 import { getOldReading, readingLastUpdatedAt } from "@/lib/readings";
 import { canResidentSubmitForPeriod } from "@/lib/settings";
 import { SubmitReadingClient } from "./SubmitReadingClient";
@@ -17,9 +19,16 @@ export default async function SubmitReadingPage() {
     include: { priceGroup: true },
   });
 
-  const currentPeriod = await prisma.billingPeriod.findFirst({
-    orderBy: [{ year: "desc" }, { month: "desc" }],
-  });
+  const periods = await getBillingPeriods();
+  const cal = currentCalendarPeriod();
+  const currentPeriod =
+    periods.find((p) => p.year === cal.year && p.month === cal.month) ??
+    periods.find((p) => p.status === "OPEN") ??
+    periods[0];
+
+  if (currentPeriod?.status === "OPEN") {
+    await enrollHouseholdInOpenPeriods(user.householdId);
+  }
 
   const currentReading =
     currentPeriod && user.householdId

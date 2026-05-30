@@ -1,7 +1,14 @@
 import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import { prisma } from "./db";
 import { calculateTotal, calculateUsage } from "./billing";
+import {
+  currentCalendarPeriod,
+  ensureActiveHouseholdsInPeriod,
+  ensureCurrentBillingPeriod,
+} from "./billingPeriods";
 import { unitPriceForHousehold } from "./routePricing";
+
+export { currentCalendarPeriod, ensureCurrentBillingPeriod };
 
 export type BillingSheetRow = {
   householdId: string;
@@ -39,6 +46,7 @@ export type RouteSummary = {
 };
 
 export async function getBillingPeriods() {
+  await ensureCurrentBillingPeriod();
   return prisma.billingPeriod.findMany({
     orderBy: [{ year: "desc" }, { month: "desc" }],
   });
@@ -55,6 +63,7 @@ export async function loadBillingSheetRows(
   routeId: string | null
 ): Promise<BillingSheetRow[]> {
   const period = await prisma.billingPeriod.findUniqueOrThrow({ where: { id: periodId } });
+  await ensureActiveHouseholdsInPeriod(periodId);
 
   const households = await prisma.household.findMany({
     where: {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import {
+  currentCalendarPeriod,
   getBillingPeriods,
   getCollectionRoutes,
   loadBillingSheetRows,
@@ -51,8 +52,10 @@ export default async function BillingSheetPage({
   const statusFilter = parseBillingSheetStatusFilter(statusParam);
   const [periods, routes] = await Promise.all([getBillingPeriods(), getCollectionRoutes()]);
 
+  const cal = currentCalendarPeriod();
   const activePeriod =
     periods.find((p) => p.id === periodId) ??
+    periods.find((p) => p.year === cal.year && p.month === cal.month) ??
     periods.find((p) => p.status === "OPEN") ??
     periods[0];
 

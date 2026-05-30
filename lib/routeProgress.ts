@@ -1,14 +1,35 @@
 import { ReadingStatus } from "@/lib/types/enums";
 import { prisma } from "./db";
-import { getBillingPeriods, getCollectionRoutes } from "./billingSheet";
+import {
+  currentCalendarPeriod,
+  getBillingPeriods,
+  getCollectionRoutes,
+} from "./billingSheet";
 
 type RouteCountRow = { collectionRouteId: string; count: bigint };
 
+function pickDefaultPeriod(
+  periods: Awaited<ReturnType<typeof getBillingPeriods>>,
+  periodId?: string
+) {
+  if (periodId) {
+    return (
+      periods.find((p) => p.id === periodId) ??
+      periods.find((p) => p.status === "OPEN") ??
+      periods[0]
+    );
+  }
+  const cal = currentCalendarPeriod();
+  return (
+    periods.find((p) => p.year === cal.year && p.month === cal.month) ??
+    periods.find((p) => p.status === "OPEN") ??
+    periods[0]
+  );
+}
+
 export async function getCurrentPeriodProgress(periodId?: string) {
   const periods = await getBillingPeriods();
-  const current = periodId
-    ? (periods.find((p) => p.id === periodId) ?? periods.find((p) => p.status === "OPEN") ?? periods[0])
-    : (periods.find((p) => p.status === "OPEN") ?? periods[0]);
+  const current = pickDefaultPeriod(periods, periodId);
   if (!current) return null;
 
   const routes = await getCollectionRoutes();
