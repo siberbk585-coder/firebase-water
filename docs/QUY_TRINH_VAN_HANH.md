@@ -47,5 +47,6 @@
 ## Liên kết nhanh (admin)
 
 - Chờ chốt: `/admin/billing-sheet?status=pending`
+- Đã thu: `/admin/billing-sheet?status=paid`
 - Hóa đơn: `/admin/invoices`
 - Xuất Excel: nút trên bảng ghi hoặc `/admin/export`

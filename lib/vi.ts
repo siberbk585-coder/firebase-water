@@ -10,11 +10,16 @@ import type { AnomalyCode } from "./anomaly";
 
 export const appTitle = "Thu tiền nước";
 
+/** Bật `true` để hiện mục menu Thu tiền (/admin/payments) trên header. */
+export const showPaymentsNav = false;
+
 /** Menu vận hành theo đúng quy trình thu tiền nước hàng tháng. */
 export const adminNav = [
   { href: "/admin/dashboard", label: "Tổng quan" },
   { href: "/admin/billing-sheet", label: "Bảng thu nước" },
-  { href: "/admin/payments", label: "Thu tiền" },
+  ...(showPaymentsNav
+    ? ([{ href: "/admin/payments", label: "Thu tiền" }] as const)
+    : []),
   { href: "/admin/households", label: "Danh sách hộ" },
   { href: "/admin/area-prices", label: "Giá khu vực" },
   { href: "/admin/audit-log", label: "Nhật ký" },

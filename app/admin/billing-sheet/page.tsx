@@ -99,6 +99,7 @@ export default async function BillingSheetPage({
 
   const pendingCount = countBillingSheetStatusFilter(rows, "pending");
   const confirmedCount = countBillingSheetStatusFilter(rows, "confirmed");
+  const paidCount = countBillingSheetStatusFilter(rows, "paid");
   const routeQuery = isAll ? "all" : activeRoute?.id ?? "all";
 
   function billingHref(extra?: Record<string, string>) {
@@ -120,6 +121,7 @@ export default async function BillingSheetPage({
     { key: "all", label: "Tất cả" },
     { key: "pending", label: pendingCount ? `Chờ chốt (${pendingCount})` : "Chờ chốt" },
     { key: "confirmed", label: confirmedCount ? `Đã chốt (${confirmedCount})` : "Đã chốt" },
+    { key: "paid", label: paidCount ? `Đã thu (${paidCount})` : "Đã thu" },
   ];
 
   return (
