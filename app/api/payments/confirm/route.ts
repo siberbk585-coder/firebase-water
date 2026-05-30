@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { InvoiceStatus, UserRole } from "@/lib/types/enums";
 import { PaymentMethod } from "@prisma/client";
 import { logAudit } from "@/lib/audit";
+import { auditExtraFromRequest } from "@/lib/auditClient";
+import { invoiceAuditMetadata } from "@/lib/auditDisplay";
 import { z } from "zod";
 
 const schema = z.object({
@@ -26,6 +28,12 @@ export async function POST(request: Request) {
 
   const invoice = await prisma.invoice.findUniqueOrThrow({
     where: { id: parsed.data.invoiceId },
+    include: {
+      household: {
+        select: { householdCode: true, meterCode: true, residentName: true },
+      },
+      period: { select: { month: true, year: true } },
+    },
   });
 
   await prisma.payment.upsert({
@@ -56,6 +64,11 @@ export async function POST(request: Request) {
     action: "PAYMENT_CONFIRMED",
     entity: "Invoice",
     entityId: invoice.id,
+    metadata: invoiceAuditMetadata(invoice, invoice.household, invoice.period, {
+      hinhThuc: parsed.data.method,
+      ...(parsed.data.note ? { ghiChu: parsed.data.note } : {}),
+      ...auditExtraFromRequest(request),
+    }),
   });
 
   revalidatePath("/admin/payments");

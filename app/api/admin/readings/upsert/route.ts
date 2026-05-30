@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { UserRole } from "@/lib/types/enums";;
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
+import { auditExtraFromRequest } from "@/lib/auditClient";
 import { adminUpsertReading } from "@/lib/readings";
 import { calculateUsage } from "@/lib/billing";
 import { syncInvoiceForConfirmedReading } from "@/lib/invoices";
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
       periodId,
       confirmedValue,
       actorId: session.id,
+      auditExtra: auditExtraFromRequest(request),
     });
     const usageM3 = reading.usageM3 ?? calculateUsage(confirmedValue, reading.oldReading);
     const invoice = await syncInvoiceForConfirmedReading(householdId, periodId);

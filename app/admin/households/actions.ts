@@ -133,7 +133,7 @@ export async function createHousehold(formData: FormData): Promise<void> {
       action: "HOUSEHOLD_CREATED",
       entity: "Household",
       entityId: household.id,
-      metadata: { householdCode, meterCode },
+      metadata: { tenHo: residentName, maHo: householdCode, mkh: meterCode },
     });
 
     revalidatePath("/admin/households");
@@ -171,7 +171,7 @@ export async function updateHouseholdPaymentMethod(
     action: "HOUSEHOLD_PAYMENT_METHOD_UPDATED",
     entity: "Household",
     entityId: householdId,
-    metadata: { paymentMethod: raw },
+    metadata: { hinhThuc: raw },
   });
   revalidatePath(`/admin/households/${householdId}`);
   revalidatePath("/admin/payments");
@@ -184,7 +184,12 @@ export async function deleteHousehold(
 
   const household = await prisma.household.findUniqueOrThrow({
     where: { id: householdId },
-    select: { householdCode: true, meterCode: true, userId: true },
+    select: {
+      householdCode: true,
+      meterCode: true,
+      residentName: true,
+      userId: true,
+    },
   });
 
   const paidCount = await prisma.invoice.count({
@@ -210,7 +215,11 @@ export async function deleteHousehold(
     action: "HOUSEHOLD_DELETED",
     entity: "Household",
     entityId: householdId,
-    metadata: { householdCode: household.householdCode, meterCode: household.meterCode },
+    metadata: {
+      tenHo: household.residentName,
+      maHo: household.householdCode,
+      mkh: household.meterCode,
+    },
   });
 
   revalidatePath("/admin/households");

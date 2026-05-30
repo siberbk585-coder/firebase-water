@@ -5,6 +5,7 @@ import { UserRole, ReadingStatus } from "@/lib/types/enums";;
 import { prisma } from "@/lib/db";
 import { syncInvoiceForConfirmedReading } from "@/lib/invoices";
 import { logAudit } from "@/lib/audit";
+import { periodAuditMetadata } from "@/lib/auditDisplay";
 import { z } from "zod";
 
 const schema = z.object({ periodId: z.string() });
@@ -56,12 +57,20 @@ export async function POST(request: Request) {
     }
 
     try {
+      const period = await prisma.billingPeriod.findUnique({
+        where: { id: parsed.data.periodId },
+        select: { month: true, year: true },
+      });
       await logAudit({
         actorId: session.id,
         action: "INVOICES_GENERATED",
         entity: "BillingPeriod",
         entityId: parsed.data.periodId,
-        metadata: { count: created, failed: errors.length },
+        metadata: {
+          ...(period ? periodAuditMetadata(period) : {}),
+          count: created,
+          failed: errors.length,
+        },
       });
     } catch (auditErr) {
       console.error("[invoices/generate] audit log failed", auditErr);

@@ -35,6 +35,7 @@
     "db:update-addresses-haiphong": "tsx scripts/update-addresses-haiphong.mjs",
     "db:reshape-mock-periods": "tsx scripts/reshape-mock-periods.ts",
     "db:audit": "tsx scripts/db-audit.ts",
+    "db:dedupe-names": "tsx scripts/dedupe-resident-names.ts",
     "dataconnect:generate": "npx -y firebase-tools@latest dataconnect:sdk:generate",
     "dataconnect:deploy": "npx -y firebase-tools@latest deploy --only dataconnect",
     "firebase:deploy-hosting": "npx -y firebase-tools@latest deploy --only hosting",

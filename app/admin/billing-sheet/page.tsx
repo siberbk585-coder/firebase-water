@@ -6,7 +6,12 @@ import {
   loadBillingSheetRows,
   loadRouteSummaries,
 } from "@/lib/billingSheet";
-import { BillingSheetGrid, type ReadingStatusFilter } from "@/components/BillingSheetGrid";
+import { BillingSheetGrid } from "@/components/BillingSheetGrid";
+import {
+  countBillingSheetStatusFilter,
+  parseBillingSheetStatusFilter,
+  type BillingSheetStatusFilter,
+} from "@/lib/billingSheetFilters";
 import { BillingSheetSummary } from "@/components/BillingSheetSummary";
 import { BillingPeriodSelect } from "@/components/BillingPeriodSelect";
 import { BillingRouteSelect } from "@/components/BillingRouteSelect";
@@ -14,7 +19,6 @@ import { BillingExcelPanel } from "@/components/BillingExcelPanel";
 import { BillingPrintPanel } from "@/components/BillingPrintPanel";
 import { BillingPrintSelectionProvider } from "@/components/billing-print-selection";
 import { formatPeriod } from "@/lib/vi";
-import { ReadingStatus } from "@/lib/types/enums";;
 
 export default async function BillingSheetPage({
   searchParams,
@@ -44,11 +48,7 @@ export default async function BillingSheetPage({
     message,
     durationMs,
   } = await searchParams;
-  const statusFilter = (["all", "pending", "confirmed", "rejected"] as const).includes(
-    statusParam as ReadingStatusFilter
-  )
-    ? (statusParam as ReadingStatusFilter)
-    : "all";
+  const statusFilter = parseBillingSheetStatusFilter(statusParam);
   const [periods, routes] = await Promise.all([getBillingPeriods(), getCollectionRoutes()]);
 
   const activePeriod =
@@ -97,7 +97,8 @@ export default async function BillingSheetPage({
       })
     : rows;
 
-  const pendingCount = rows.filter((r) => r.status === ReadingStatus.PENDING).length;
+  const pendingCount = countBillingSheetStatusFilter(rows, "pending");
+  const confirmedCount = countBillingSheetStatusFilter(rows, "confirmed");
   const routeQuery = isAll ? "all" : activeRoute?.id ?? "all";
 
   function billingHref(extra?: Record<string, string>) {
@@ -115,11 +116,10 @@ export default async function BillingSheetPage({
   }
 
   const clearSearchHref = billingHref({ q: "" });
-  const statusTabs: { key: ReadingStatusFilter; label: string }[] = [
+  const statusTabs: { key: BillingSheetStatusFilter; label: string }[] = [
     { key: "all", label: "Tất cả" },
     { key: "pending", label: pendingCount ? `Chờ chốt (${pendingCount})` : "Chờ chốt" },
-    { key: "confirmed", label: "Đã chốt" },
-    { key: "rejected", label: "Từ chối" },
+    { key: "confirmed", label: confirmedCount ? `Đã chốt (${confirmedCount})` : "Đã chốt" },
   ];
 
   return (
@@ -150,11 +150,17 @@ export default async function BillingSheetPage({
               : activeRoute
                 ? ` — ${activeRoute.name}`
                 : ""}
-          {!isSummary && query && (
+          {!isSummary && (query || statusFilter !== "all") && (
             <span>
               {" "}
-              · hiển thị <strong>{filteredRows.length}</strong>/
-              {rows.length} hộ
+              · hiển thị{" "}
+              <strong>
+                {countBillingSheetStatusFilter(
+                  query ? filteredRows : rows,
+                  statusFilter
+                )}
+              </strong>
+              /{rows.length} hộ
             </span>
           )}
         </p>

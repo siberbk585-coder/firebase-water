@@ -7,6 +7,7 @@ import { sendInvoiceViaN8n, periodLabelFromParts } from "@/lib/n8nInvoice";
 import { buildTransferNote } from "@/lib/paymentQr";
 import { isExternalPdfUrl } from "@/lib/invoicePdf";
 import { logAudit } from "@/lib/audit";
+import { invoiceAuditMetadata } from "@/lib/auditDisplay";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -50,7 +51,9 @@ async function sendOne(invoiceId: string, actorId: string) {
     action: "INVOICE_SEND_BANK_TRANSFER",
     entity: "Invoice",
     entityId: inv.id,
-    metadata: { householdCode: inv.household.householdCode, skipped: result.skipped ?? false },
+    metadata: invoiceAuditMetadata(inv, inv.household, inv.period, {
+      skipped: result.skipped ?? false,
+    }),
   });
 
   return { skipped: result.skipped ?? false };

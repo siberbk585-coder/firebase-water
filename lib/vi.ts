@@ -86,6 +86,7 @@ export function auditActionLabel(action: string): string {
     READING_REJECTED: "Từ chối chỉ số",
     INVOICES_GENERATED: "Chốt hóa đơn kỳ",
     INVOICE_EXPORT_LOCAL: "Xuất PDF hóa đơn",
+    INVOICE_SEND_BANK_TRANSFER: "Gửi QR chuyển khoản",
     INVOICES_ZALO_SENT: "Gửi hóa đơn Zalo",
     PERIOD_CLOSED: "Đóng kỳ",
     PAYMENT_CONFIRMED: "Xác nhận thanh toán",
@@ -94,6 +95,8 @@ export function auditActionLabel(action: string): string {
     XLSX_IMPORT: "Nhập Excel kỳ thu",
     SETTINGS_UPDATED: "Cập nhật cài đặt",
     HOUSEHOLD_CREATED: "Thêm hộ mới",
+    HOUSEHOLD_DELETED: "Xóa hộ",
+    HOUSEHOLD_PAYMENT_METHOD_UPDATED: "Đổi hình thức thu hộ",
   };
   return map[action] ?? action;
 }

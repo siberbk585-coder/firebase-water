@@ -3,6 +3,7 @@ import { InputMethod, InvoiceStatus, ReadingStatus } from "@/lib/types/enums";
 import * as XLSX from "xlsx-js-style";
 import { calculateUsage } from "./billing";
 import { logAudit } from "./audit";
+import { periodAuditMetadata } from "./auditDisplay";
 import { prisma } from "@/lib/data/prisma";
 import { syncInvoiceForConfirmedReading } from "./invoices";
 import { assertPriorPeriodReadingConfirmed } from "./periodChain";
@@ -348,6 +349,7 @@ export async function importPeriodRouteWorkbook(params: {
     entity: "Export",
     entityId: params.periodId,
     metadata: {
+      ...periodAuditMetadata(ctx.period),
       readingUpdated: result.readingUpdated,
       paymentUpdated: result.paymentUpdated,
       skipped: result.skipped,

@@ -3,12 +3,15 @@ import { getSession } from "@/lib/auth";
 import { UserRole } from "@/lib/types/enums";;
 import { exportInvoicePdfLocal } from "@/lib/invoicePdfLocal";
 import { logAudit } from "@/lib/audit";
+import { auditExtraFromRequest } from "@/lib/auditClient";
+import { invoiceAuditMetadata } from "@/lib/auditDisplay";
+import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
 
 /** Xuất 1 PDF, lưu link n8n nếu bật webhook hoặc fallback local khi dev. */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -21,11 +24,26 @@ export async function GET(
     const { buffer, meterCode } = await exportInvoicePdfLocal(id);
 
     try {
+      const invoice = await prisma.invoice.findUniqueOrThrow({
+        where: { id },
+        include: {
+          household: {
+            select: { householdCode: true, meterCode: true, residentName: true },
+          },
+          period: { select: { month: true, year: true } },
+        },
+      });
       await logAudit({
         actorId: session.id,
         action: "INVOICE_EXPORT_LOCAL",
         entity: "Invoice",
         entityId: id,
+        metadata: invoiceAuditMetadata(
+          invoice,
+          invoice.household,
+          invoice.period,
+          auditExtraFromRequest(request)
+        ),
       });
     } catch {
       /* audit không chặn tải file */

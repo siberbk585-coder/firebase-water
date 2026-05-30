@@ -3,6 +3,9 @@ import { getSession } from "@/lib/auth";
 import { confirmReading } from "@/lib/readings";
 import { InputMethod } from "@/lib/types/enums";;
 import { logAudit } from "@/lib/audit";
+import { meterReadingAuditMetadata } from "@/lib/auditDisplay";
+import { prisma } from "@/lib/db";
+import { formatPeriod } from "@/lib/vi";
 import { z } from "zod";
 
 const schema = z.object({
@@ -29,11 +32,24 @@ export async function POST(request: Request) {
       inputMethod: parsed.data.inputMethod as InputMethod,
       actorId: session.id,
     });
+    const full = await prisma.meterReading.findUniqueOrThrow({
+      where: { id: reading.id },
+      include: {
+        household: {
+          select: { householdCode: true, meterCode: true, residentName: true },
+        },
+        period: { select: { month: true, year: true } },
+      },
+    });
     await logAudit({
       actorId: session.id,
       action: "READING_CONFIRMED",
       entity: "MeterReading",
       entityId: reading.id,
+      metadata: meterReadingAuditMetadata(full, full.household, {
+        ky: formatPeriod(full.period.month, full.period.year),
+        phuongThuc: parsed.data.inputMethod,
+      }),
     });
     return NextResponse.json({ ok: true, reading });
   } catch (e) {

@@ -7,13 +7,17 @@ import { formatCurrency, previewBillingRow } from "@/lib/billing";
 import { readingStatusLabel } from "@/lib/vi";
 import { BillingSheetInvoiceBtn } from "@/components/BillingSheetInvoiceBtn";
 import { useBillingPrintSelectionOptional } from "@/components/billing-print-selection";
+import {
+  type BillingSheetStatusFilter,
+  matchesBillingSheetStatusFilter,
+} from "@/lib/billingSheetFilters";
 
-export type ReadingStatusFilter = "all" | "pending" | "confirmed" | "rejected";
+export type ReadingStatusFilter = BillingSheetStatusFilter;
 
 type Props = {
   periodId: string;
   rows: BillingSheetRow[];
-  statusFilter?: ReadingStatusFilter;
+  statusFilter?: BillingSheetStatusFilter;
   /** Bảng tổng — hiện cột khu vực */
   showRoute?: boolean;
 };
@@ -42,16 +46,10 @@ export function BillingSheetGrid({
     return () => window.clearTimeout(t);
   }, [savedHint]);
 
-  const filteredRows = useMemo(() => {
-    if (statusFilter === "all") return localRows;
-    if (statusFilter === "pending") {
-      return localRows.filter((r) => r.status === ReadingStatus.PENDING);
-    }
-    if (statusFilter === "confirmed") {
-      return localRows.filter((r) => r.status === ReadingStatus.CONFIRMED);
-    }
-    return localRows.filter((r) => r.status === ReadingStatus.REJECTED);
-  }, [localRows, statusFilter]);
+  const filteredRows = useMemo(
+    () => localRows.filter((r) => matchesBillingSheetStatusFilter(r, statusFilter)),
+    [localRows, statusFilter]
+  );
 
   const confirmedVisibleIds = useMemo(
     () =>

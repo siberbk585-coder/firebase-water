@@ -7,6 +7,7 @@ import { uploadReadingImageViaN8n } from "./imageUpload";
 import { logAudit } from "./audit";
 import { meterReadingAuditMetadata } from "./auditDisplay";
 import { assertPriorPeriodReadingConfirmed } from "./periodChain";
+import { formatPeriod } from "./vi";
 
 export async function getAvgUsage3Months(
   householdId: string,
@@ -122,7 +123,7 @@ export async function submitManualReading(params: {
 }) {
   const household = await prisma.household.findUniqueOrThrow({
     where: { id: params.householdId },
-    select: { householdCode: true, meterCode: true },
+    select: { householdCode: true, meterCode: true, residentName: true },
   });
 
   const oldReading = await getOldReading(params.householdId, params.periodId);
@@ -188,6 +189,10 @@ export async function submitManualReading(params: {
       });
 
   if (params.actorId) {
+    const period = await prisma.billingPeriod.findUnique({
+      where: { id: params.periodId },
+      select: { month: true, year: true },
+    });
     await logAudit({
       actorId: params.actorId,
       action: "READING_SUBMITTED",
@@ -195,6 +200,8 @@ export async function submitManualReading(params: {
       entityId: reading.id,
       metadata: meterReadingAuditMetadata(reading, household, {
         coAnh: Boolean(imagePath),
+        ...(period ? { ky: formatPeriod(period.month, period.year) } : {}),
+        phuongThuc: inputMethod,
       }),
     });
   }
@@ -211,7 +218,8 @@ export async function approveReading(params: {
   const existing = await prisma.meterReading.findUniqueOrThrow({
     where: { id: params.readingId },
     include: {
-      household: { select: { householdCode: true, meterCode: true } },
+      household: { select: { householdCode: true, meterCode: true, residentName: true } },
+      period: { select: { month: true, year: true } },
     },
   });
   if (existing.status !== ReadingStatus.PENDING) {
@@ -249,7 +257,10 @@ export async function approveReading(params: {
     action: "READING_CONFIRMED",
     entity: "MeterReading",
     entityId: reading.id,
-    metadata: meterReadingAuditMetadata(reading, existing.household),
+    metadata: meterReadingAuditMetadata(reading, existing.household, {
+      ky: formatPeriod(existing.period.month, existing.period.year),
+      phuongThuc: inputMethod,
+    }),
   });
 
   return reading;
@@ -264,7 +275,8 @@ export async function rejectReading(params: {
   const existing = await prisma.meterReading.findUniqueOrThrow({
     where: { id: params.readingId },
     include: {
-      household: { select: { householdCode: true, meterCode: true } },
+      household: { select: { householdCode: true, meterCode: true, residentName: true } },
+      period: { select: { month: true, year: true } },
     },
   });
   if (existing.status !== ReadingStatus.PENDING) {
@@ -287,6 +299,7 @@ export async function rejectReading(params: {
     entity: "MeterReading",
     entityId: reading.id,
     metadata: meterReadingAuditMetadata(reading, existing.household, {
+      ky: formatPeriod(existing.period.month, existing.period.year),
       ...(params.reason ? { lyDo: params.reason } : {}),
     }),
   });
@@ -300,6 +313,7 @@ export async function adminUpsertReading(params: {
   periodId: string;
   confirmedValue: number;
   actorId: string;
+  auditExtra?: Record<string, unknown>;
 }) {
   const paidInvoice = await prisma.invoice.findFirst({
     where: {
@@ -313,10 +327,16 @@ export async function adminUpsertReading(params: {
     throw new Error("Không thể chốt lại — hóa đơn kỳ này đã được xác nhận thu");
   }
 
-  const household = await prisma.household.findUniqueOrThrow({
-    where: { id: params.householdId },
-    select: { householdCode: true, meterCode: true },
-  });
+  const [household, period] = await Promise.all([
+    prisma.household.findUniqueOrThrow({
+      where: { id: params.householdId },
+      select: { householdCode: true, meterCode: true, residentName: true },
+    }),
+    prisma.billingPeriod.findUniqueOrThrow({
+      where: { id: params.periodId },
+      select: { month: true, year: true },
+    }),
+  ]);
 
   const oldReading = await getOldReading(params.householdId, params.periodId);
 
@@ -344,13 +364,15 @@ export async function adminUpsertReading(params: {
         },
       });
 
+  const upsertInputMethod =
+    existing?.status === ReadingStatus.PENDING && existing.imagePath
+      ? InputMethod.OCR_EDITED
+      : InputMethod.MANUAL;
+
   const reading = await confirmReading({
     readingId: draft.id,
     confirmedValue: params.confirmedValue,
-    inputMethod:
-      existing?.status === ReadingStatus.PENDING && existing.imagePath
-        ? InputMethod.OCR_EDITED
-        : InputMethod.MANUAL,
+    inputMethod: upsertInputMethod,
     actorId: params.actorId,
   });
 
@@ -359,7 +381,11 @@ export async function adminUpsertReading(params: {
     action: "READING_CONFIRMED",
     entity: "MeterReading",
     entityId: reading.id,
-    metadata: meterReadingAuditMetadata(reading, household),
+    metadata: meterReadingAuditMetadata(reading, household, {
+      ky: formatPeriod(period.month, period.year),
+      phuongThuc: upsertInputMethod,
+      ...params.auditExtra,
+    }),
   });
 
   return reading;

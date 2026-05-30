@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@/lib/types/enums";;
 import { getSession } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { periodAuditMetadata } from "@/lib/auditDisplay";
 import { prisma } from "@/lib/db";
 import {
   buildPeriodRouteExportBuffer,
@@ -34,7 +35,11 @@ export async function GET(request: Request) {
     actorId: session.id,
     action: "XLSX_EXPORT",
     entity: "Export",
-    metadata: { filename, periodId },
+    metadata: {
+      ...periodAuditMetadata(period),
+      filename,
+      periodId,
+    },
   });
 
   return new NextResponse(new Uint8Array(buffer), {

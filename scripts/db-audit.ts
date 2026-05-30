@@ -57,6 +57,29 @@ async function main() {
     console.log("Hóa đơn:", invoices);
     console.log("Kỳ gần nhất:", periods.map((p) => `T${p.month}/${p.year} ${p.status}`).join(", "));
 
+    const allNames = await prisma.household.findMany({
+      select: { residentName: true, householdCode: true },
+    });
+    const norm = new Map<string, string[]>();
+    for (const h of allNames) {
+      const key = h.residentName.trim().replace(/\s+/g, " ").toLowerCase();
+      const arr = norm.get(key) ?? [];
+      arr.push(h.householdCode);
+      norm.set(key, arr);
+    }
+    const dupGroups = [...norm.entries()].filter(([, codes]) => codes.length > 1);
+    console.log("\n--- Tên hộ trùng ---");
+    console.log("Nhóm trùng:", dupGroups.length);
+    if (dupGroups.length) {
+      for (const [name, codes] of dupGroups.slice(0, 8)) {
+        console.log(` • "${name}" (${codes.length}): ${codes.slice(0, 6).join(", ")}${codes.length > 6 ? "…" : ""}`);
+      }
+      console.log("Sửa: npm run db:dedupe-names  →  xem trước");
+      console.log("     ALLOW_DESTRUCTIVE_DB=yes-I-know npm run db:dedupe-names -- --apply");
+    } else {
+      console.log("Không có tên trùng.");
+    }
+
     console.log("\n--- Script bị chặn trên production (trừ khi ALLOW_DESTRUCTIVE_DB) ---");
     for (const s of [
       "db:seed / db:reset",

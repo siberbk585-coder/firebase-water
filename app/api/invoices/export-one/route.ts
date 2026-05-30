@@ -5,6 +5,10 @@ import {
   ensureInvoiceForHouseholdPeriod,
   exportInvoicePdfLocal,
 } from "@/lib/invoicePdfLocal";
+import { logAudit } from "@/lib/audit";
+import { auditExtraFromRequest } from "@/lib/auditClient";
+import { invoiceAuditMetadata } from "@/lib/auditDisplay";
+import { prisma } from "@/lib/db";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -31,6 +35,32 @@ export async function POST(request: Request) {
       parsed.data.periodId
     );
     const { buffer, meterCode } = await exportInvoicePdfLocal(invoiceId);
+
+    try {
+      const invoice = await prisma.invoice.findUniqueOrThrow({
+        where: { id: invoiceId },
+        include: {
+          household: {
+            select: { householdCode: true, meterCode: true, residentName: true },
+          },
+          period: { select: { month: true, year: true } },
+        },
+      });
+      await logAudit({
+        actorId: session.id,
+        action: "INVOICE_EXPORT_LOCAL",
+        entity: "Invoice",
+        entityId: invoiceId,
+        metadata: invoiceAuditMetadata(
+          invoice,
+          invoice.household,
+          invoice.period,
+          auditExtraFromRequest(request)
+        ),
+      });
+    } catch {
+      /* audit không chặn tải file */
+    }
 
     const filename = `hoa-don-${meterCode}.pdf`;
     return new NextResponse(new Uint8Array(buffer), {

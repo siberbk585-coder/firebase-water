@@ -1,10 +1,7 @@
 import Link from "next/link";
+import { AuditDetailList } from "@/components/AuditDetailList";
 import { prisma } from "@/lib/db";
-import {
-  formatAuditMetadata,
-  formatMeterReadingAuditDetail,
-  isEmptyAuditMetadata,
-} from "@/lib/auditDisplay";
+import { enrichAuditLogRows } from "@/lib/auditEnrich";
 import { formatDateTimeVN } from "@/lib/datetime";
 import {
   auditActionLabel,
@@ -44,51 +41,7 @@ export default async function AuditLogPage({
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  const readingEnrichIds = [
-    ...new Set(
-      logs
-        .filter(
-          (l) =>
-            l.entity === "MeterReading" &&
-            l.entityId &&
-            isEmptyAuditMetadata(l.metadata)
-        )
-        .map((l) => l.entityId as string)
-    ),
-  ];
-
-  const readingsById = new Map(
-    readingEnrichIds.length
-      ? (
-          await prisma.meterReading.findMany({
-            where: { id: { in: readingEnrichIds } },
-            include: {
-              household: {
-                select: { householdCode: true, meterCode: true },
-              },
-            },
-          })
-        ).map((r) => [r.id, r] as const)
-      : []
-  );
-
-  const logRows = logs.map((log) => {
-    if (
-      log.entity === "MeterReading" &&
-      log.entityId &&
-      isEmptyAuditMetadata(log.metadata)
-    ) {
-      const reading = readingsById.get(log.entityId);
-      if (reading) {
-        return {
-          log,
-          detail: formatMeterReadingAuditDetail(reading, reading.household),
-        };
-      }
-    }
-    return { log, detail: formatAuditMetadata(log.metadata) };
-  });
+  const rows = await enrichAuditLogRows(logs);
 
   function pageHref(p: number, action?: string) {
     const q = new URLSearchParams();
@@ -104,8 +57,8 @@ export default async function AuditLogPage({
         <div>
           <h1 className="text-2xl font-bold">Nhật ký hệ thống</h1>
           <p className="text-sm text-[var(--muted)]">
-            Lịch sử thao tác: gửi/chốt chỉ số, hóa đơn, Excel, thanh toán… · Giờ
-            hiển thị GMT+7
+            Lịch sử thao tác chi tiết: hộ, kỳ, chỉ số, hóa đơn, thu tiền, Excel… ·
+            Giờ GMT+7
           </p>
         </div>
         <p className="text-sm text-[var(--muted)]">
@@ -148,16 +101,16 @@ export default async function AuditLogPage({
               <th>Người thực hiện</th>
               <th>Thao tác</th>
               <th>Đối tượng</th>
-              <th>Chi tiết</th>
+              <th className="min-w-[14rem]">Chi tiết</th>
             </tr>
           </thead>
           <tbody>
-            {logRows.map(({ log, detail }) => (
-              <tr key={log.id} className="border-b text-sm">
-                <td className="whitespace-nowrap text-[var(--muted)]">
+            {rows.map(({ log, lines, entityHref, entitySummary }) => (
+              <tr key={log.id} className="border-b text-sm align-top">
+                <td className="whitespace-nowrap py-3 text-[var(--muted)]">
                   {formatDateTimeVN(log.createdAt)}
                 </td>
-                <td>
+                <td className="py-3">
                   {log.actor ? (
                     <>
                       <span className="font-medium">{log.actor.name}</span>
@@ -169,28 +122,42 @@ export default async function AuditLogPage({
                     <span className="text-[var(--muted)]">Hệ thống</span>
                   )}
                 </td>
-                <td>
-                  <span className="font-medium">{auditActionLabel(log.action)}</span>
-                  <span className="block font-mono text-[10px] text-[var(--muted)]">
-                    {log.action}
+                <td className="py-3">
+                  <span className="font-medium">
+                    {auditActionLabel(log.action)}
                   </span>
                 </td>
-                <td>
-                  {entityLabel(log.entity)}
-                  {log.entityId && (
-                    <span className="block font-mono text-[10px] text-[var(--muted)]">
-                      {log.entityId.length > 20
-                        ? `${log.entityId.slice(0, 18)}…`
+                <td className="py-3">
+                  <span className="text-[var(--muted)]">
+                    {entityLabel(log.entity)}
+                  </span>
+                  {entitySummary ? (
+                    entityHref ? (
+                      <Link
+                        href={entityHref}
+                        className="mt-0.5 block font-medium text-[var(--primary)] hover:underline"
+                      >
+                        {entitySummary}
+                      </Link>
+                    ) : (
+                      <span className="mt-0.5 block font-medium">
+                        {entitySummary}
+                      </span>
+                    )
+                  ) : log.entityId ? (
+                    <span className="mt-0.5 block font-mono text-[10px] text-[var(--muted)]">
+                      {log.entityId.length > 24
+                        ? `${log.entityId.slice(0, 22)}…`
                         : log.entityId}
                     </span>
-                  )}
+                  ) : null}
                 </td>
-                <td className="max-w-md text-xs text-[var(--muted)]">
-                  {detail}
+                <td className="max-w-md py-3">
+                  <AuditDetailList lines={lines} />
                 </td>
               </tr>
             ))}
-            {!logs.length && (
+            {!rows.length && (
               <tr>
                 <td colSpan={5} className="p-8 text-center text-[var(--muted)]">
                   Chưa có nhật ký{actionFilter ? " cho bộ lọc này" : ""}.

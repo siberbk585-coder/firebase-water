@@ -6,6 +6,7 @@ import { buildTransferNote } from "@/lib/paymentQr";
 import { sendInvoiceViaN8n, periodLabelFromParts } from "@/lib/n8nInvoice";
 import { isExternalPdfUrl } from "@/lib/invoicePdf";
 import { logAudit } from "@/lib/audit";
+import { periodAuditMetadata } from "@/lib/auditDisplay";
 import { z } from "zod";
 
 const schema = z.object({ periodId: z.string() });
@@ -77,12 +78,22 @@ export async function POST(request: Request) {
     }
   }
 
+  const period = await prisma.billingPeriod.findUnique({
+    where: { id: parsed.data.periodId },
+    select: { month: true, year: true },
+  });
   await logAudit({
     actorId: session.id,
     action: "INVOICES_ZALO_SENT",
     entity: "BillingPeriod",
     entityId: parsed.data.periodId,
-    metadata: { sent, skipped, errorCount: errors.length },
+    metadata: {
+      ...(period ? periodAuditMetadata(period) : {}),
+      sent,
+      skipped,
+      errorCount: errors.length,
+      count: invoices.length,
+    },
   });
 
   return NextResponse.json({
