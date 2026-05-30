@@ -169,6 +169,9 @@ model Invoice {
   period        BillingPeriod     @relation(fields: [periodId], references: [id])
   usageM3       Float             @map("usage_m3")
   unitPrice     Float             @map("unit_price")
+  subtotalAmount Float            @map("subtotal_amount")
+  vatPercent    Float             @default(0) @map("vat_percent")
+  vatAmount     Float             @default(0) @map("vat_amount")
   totalAmount   Float             @map("total_amount")
   pdfPath       String?           @map("pdf_path")
   status        InvoiceStatus     @default(DRAFT)
@@ -200,6 +203,7 @@ model SystemSettings {
   id             String   @id @default("default")
   periodCloseDay Int      @default(25) @map("period_close_day")
   timezone       String   @default("Asia/Ho_Chi_Minh")
+  vatPercent     Float    @default(10) @map("vat_percent")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")

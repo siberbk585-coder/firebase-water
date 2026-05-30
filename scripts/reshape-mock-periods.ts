@@ -1,8 +1,8 @@
 /**
- * Chỉnh mock theo kỳ: T3 chốt + thu 100%, T4 chốt ~92% (8 hộ chưa đóng), T5 giữ nguyên.
+ * Chỉnh mock theo kỳ: T3 + T4 chốt + thu 100% (kỳ CLOSED), T5 giữ nguyên.
  *
- *   unset DATABASE_URL
  *   npm run db:reshape-mock-periods
+ *   MOCK_YEAR=2026 npm run db:reshape-mock-periods
  */
 import {
   ReadingStatus,
@@ -14,8 +14,8 @@ import {
 } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
 import { createPrismaTiennuoc } from "./prisma-tiennuoc";
-import { calculateTotal } from "../lib/billing";
 import { unitPriceForHousehold } from "../lib/routePricing";
+import { calculateBillingAmounts } from "../lib/vat";
 import { assertDestructiveAllowed } from "../lib/destructiveDbGuard";
 
 assertDestructiveAllowed("db:reshape-mock-periods");
@@ -24,8 +24,6 @@ const YEAR = Number(process.env.MOCK_YEAR ?? new Date().getFullYear());
 const MARCH = 3;
 const APRIL = 4;
 const MAY = 5;
-const APRIL_OPEN_COUNT = 8;
-
 type Hh = {
   id: string;
   householdCode: string;
@@ -113,7 +111,7 @@ async function upsertInvoice(
   status: InvoiceStatus
 ) {
   const unitPrice = unitPriceForHousehold(household);
-  const totalAmount = calculateTotal(usageM3, unitPrice);
+  const amounts = calculateBillingAmounts(usageM3, unitPrice, 10);
   const invoice = await prisma.invoice.upsert({
     where: { householdId_periodId: { householdId: household.id, periodId } },
     create: {
@@ -121,11 +119,23 @@ async function upsertInvoice(
       periodId,
       usageM3,
       unitPrice,
-      totalAmount,
+      subtotalAmount: amounts.subtotal,
+      vatPercent: amounts.vatPercent,
+      vatAmount: amounts.vatAmount,
+      totalAmount: amounts.totalAmount,
       status,
       issuedAt: status !== InvoiceStatus.DRAFT ? new Date() : null,
     },
-    update: { usageM3, unitPrice, totalAmount, status, issuedAt: new Date() },
+    update: {
+      usageM3,
+      unitPrice,
+      subtotalAmount: amounts.subtotal,
+      vatPercent: amounts.vatPercent,
+      vatAmount: amounts.vatAmount,
+      totalAmount: amounts.totalAmount,
+      status,
+      issuedAt: new Date(),
+    },
   });
 
   if (status === InvoiceStatus.PAID) {
@@ -137,32 +147,18 @@ async function upsertInvoice(
       where: { invoiceId: invoice.id },
       create: {
         invoiceId: invoice.id,
-        amount: totalAmount,
+        amount: amounts.totalAmount,
         method: "BANK_TRANSFER",
         note: "Mock reshape",
         confirmedAt: new Date(),
         confirmedById: admin?.id,
       },
-      update: { amount: totalAmount, confirmedAt: new Date() },
+      update: { amount: amounts.totalAmount, confirmedAt: new Date() },
     });
   } else {
     await prisma.payment.deleteMany({ where: { invoiceId: invoice.id } });
   }
   return invoice;
-}
-
-async function clearPeriodForHousehold(
-  prisma: PrismaClient,
-  householdId: string,
-  periodId: string
-) {
-  const inv = await prisma.invoice.findUnique({
-    where: { householdId_periodId: { householdId, periodId } },
-    select: { id: true },
-  });
-  if (inv) await prisma.payment.deleteMany({ where: { invoiceId: inv.id } });
-  await prisma.invoice.deleteMany({ where: { householdId, periodId } });
-  await prisma.meterReading.deleteMany({ where: { householdId, periodId } });
 }
 
 async function main() {
@@ -173,7 +169,7 @@ async function main() {
   const prisma = await createPrismaTiennuoc();
   try {
     const march = await ensurePeriod(prisma, YEAR, MARCH, PeriodStatus.CLOSED);
-    const april = await ensurePeriod(prisma, YEAR, APRIL, PeriodStatus.OPEN);
+    const april = await ensurePeriod(prisma, YEAR, APRIL, PeriodStatus.CLOSED);
     const may = await ensurePeriod(prisma, YEAR, MAY, PeriodStatus.OPEN);
 
     const households = await prisma.household.findMany({
@@ -185,13 +181,8 @@ async function main() {
       },
     });
 
-    const aprilOpenIds = new Set(
-      households.slice(0, APRIL_OPEN_COUNT).map((h) => h.id)
-    );
-
     let marchPaid = 0;
-    let aprilClosed = 0;
-    let aprilOpen = 0;
+    let aprilPaid = 0;
 
     for (let idx = 0; idx < households.length; idx++) {
       const h = households[idx]!;
@@ -210,23 +201,18 @@ async function main() {
       await upsertInvoice(prisma, h, march.id, usageBase, InvoiceStatus.PAID);
       marchPaid++;
 
-      if (aprilOpenIds.has(h.id)) {
-        await clearPeriodForHousehold(prisma, h.id, april.id);
-        aprilOpen++;
-        continue;
-      }
-
+      const usageApr = usageBase + (idx % 3);
       await upsertConfirmedReading(
         prisma,
         h.id,
         april.id,
         YEAR,
         APRIL,
-        usageBase,
+        usageApr,
         confirmedMar
       );
-      await upsertInvoice(prisma, h, april.id, usageBase, InvoiceStatus.ISSUED);
-      aprilClosed++;
+      await upsertInvoice(prisma, h, april.id, usageApr, InvoiceStatus.PAID);
+      aprilPaid++;
     }
 
     console.log(`Kỳ mock ${YEAR}:`);
@@ -234,7 +220,7 @@ async function main() {
       `  Tháng ${MARCH}: CLOSED — ${marchPaid}/${households.length} hộ chốt + PAID 100%`
     );
     console.log(
-      `  Tháng ${APRIL}: OPEN — ${aprilClosed} hộ đã chốt (ISSUED), ${aprilOpen} hộ chưa đóng`
+      `  Tháng ${APRIL}: CLOSED — ${aprilPaid}/${households.length} hộ chốt + PAID 100%`
     );
     console.log(`  Tháng ${MAY}: giữ nguyên (id ${may.id})`);
   } finally {

@@ -1,32 +1,81 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/billing";
-import { createRouteWithPrice, saveRoutePrices } from "./actions";
+import { getSystemSettings } from "@/lib/settings";
+import { calculateBillingAmounts } from "@/lib/vat";
+import { createRouteWithPrice, saveRoutePrices, saveVatSettings } from "./actions";
 
 export default async function AreaPricesPage() {
-  const routes = await prisma.collectionRoute.findMany({
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    include: { _count: { select: { households: true } } },
-  });
+  const [routes, settings] = await Promise.all([
+    prisma.collectionRoute.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: { _count: { select: { households: true } } },
+    }),
+    getSystemSettings(),
+  ]);
 
   const defaultPrice =
     routes.find((r) => r.unitPrice != null)?.unitPrice ??
     (await prisma.priceGroup.findFirst({ orderBy: { code: "asc" } }))?.unitPrice ??
     15000;
 
+  const vatPercent = settings.vatPercent;
+  const vatSample = calculateBillingAmounts(10, defaultPrice, vatPercent);
+
   return (
     <>
       <div className="mb-4">
-        <h1 className="text-2xl font-bold">Giá theo khu vực</h1>
+        <h1 className="text-2xl font-bold">Giá khu vực &amp; thuế VAT</h1>
         <p className="text-sm text-[var(--muted)]">
-          Mỗi khu vực thu (Đường 212, Bảng viên…) một đơn giá tiền/m³. Hộ trong khu vực
-          tính tiền theo giá này trên{" "}
+          Đơn giá theo khu vực và thuế GTGT áp dụng khi tính tiền trên{" "}
           <Link href="/admin/billing-sheet?route=all" className="text-[var(--primary)] hover:underline">
             Bảng thu nước
           </Link>
-          .
+          {" "}
+          / hóa đơn.
         </p>
       </div>
+
+      <form action={saveVatSettings} className="card mb-6">
+        <h2 className="mb-2 font-semibold">Thuế GTGT (VAT)</h2>
+        <p className="mb-3 text-sm text-[var(--muted)]">
+          Giá = m³ × đơn giá. Thành tiền = Giá + Thuế GTGT. Hóa đơn đã phát hành hoặc đã thu giữ
+          nguyên số đã lưu.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="label mb-0 text-xs" htmlFor="vatPercent">
+              Thuế VAT (%)
+            </label>
+            <input
+              id="vatPercent"
+              name="vatPercent"
+              type="number"
+              min={0}
+              max={100}
+              step={0.1}
+              className="input w-28 py-1.5 text-right font-mono tabular-nums"
+              defaultValue={vatPercent}
+              required
+            />
+          </div>
+          <button type="submit" className="btn btn-primary">
+            Lưu thuế VAT
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-[var(--muted)]">
+          Ví dụ 10 m³ × {formatCurrency(defaultPrice)}/m³: Giá{" "}
+          <strong>{formatCurrency(vatSample.subtotal)}</strong>
+          {vatSample.vatAmount > 0 && (
+            <>
+              {" "}
+              · GTGT {vatSample.vatPercent}%: <strong>{formatCurrency(vatSample.vatAmount)}</strong>
+            </>
+          )}
+          {" "}
+          · Thành tiền: <strong>{formatCurrency(vatSample.totalAmount)}</strong>
+        </p>
+      </form>
 
       <form action={saveRoutePrices} className="card mb-6 overflow-x-auto p-0">
         <table className="table-modern">

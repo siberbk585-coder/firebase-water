@@ -1,6 +1,12 @@
 import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import { prisma } from "./db";
-import { calculateTotal, calculateUsage } from "./billing";
+import { calculateUsage } from "./billing";
+import {
+  calculateBillingAmounts,
+  invoiceNeedsVatBackfill,
+  resolveInvoiceAmounts,
+} from "./vat";
+import { getVatPercent } from "./vatServer";
 import {
   currentCalendarPeriod,
   ensureActiveHouseholdsInPeriod,
@@ -16,6 +22,7 @@ export type BillingSheetRow = {
   routeName: string | null;
   routeSortOrder: number | null;
   residentName: string;
+  address: string;
   contactPhone: string | null;
   householdCode: string;
   unitPrice: number;
@@ -25,6 +32,9 @@ export type BillingSheetRow = {
   status: ReadingStatus | null;
   usageM3: number | null;
   totalAmount: number | null;
+  subtotalAmount: number | null;
+  vatAmount: number | null;
+  vatPercent: number | null;
   hasImage: boolean;
   imagePath: string | null;
   invoiceId: string | null;
@@ -64,6 +74,7 @@ export async function loadBillingSheetRows(
 ): Promise<BillingSheetRow[]> {
   const period = await prisma.billingPeriod.findUniqueOrThrow({ where: { id: periodId } });
   await ensureActiveHouseholdsInPeriod(periodId);
+  const vatPercent = await getVatPercent();
 
   const households = await prisma.household.findMany({
     where: {
@@ -139,12 +150,42 @@ export async function loadBillingSheetRows(
     const usageM3 =
       csm != null ? calculateUsage(csm, oldReading) : reading?.usageM3 ?? null;
     const unitPrice = unitPriceForHousehold(h);
-    const totalAmount =
-      usageM3 != null && usageM3 > 0
-        ? calculateTotal(usageM3, unitPrice)
-        : usageM3 === 0
-          ? 0
-          : null;
+    let amounts: ReturnType<typeof calculateBillingAmounts> | null = null;
+    if (usageM3 != null && usageM3 > 0) {
+      amounts = invoice?.subtotalAmount != null
+        ? resolveInvoiceAmounts(
+            {
+              usageM3: invoice.usageM3,
+              unitPrice: invoice.unitPrice,
+              subtotalAmount: invoice.subtotalAmount,
+              vatPercent: invoice.vatPercent,
+              vatAmount: invoice.vatAmount,
+              totalAmount: invoice.totalAmount,
+            },
+            vatPercent
+          )
+        : calculateBillingAmounts(usageM3, unitPrice, vatPercent);
+    } else if (usageM3 === 0) {
+      amounts = { subtotal: 0, vatPercent, vatAmount: 0, totalAmount: 0 };
+    }
+
+    if (
+      invoice &&
+      amounts &&
+      invoice.status !== InvoiceStatus.PAID &&
+      invoice.status !== InvoiceStatus.CANCELLED &&
+      invoiceNeedsVatBackfill(invoice, vatPercent)
+    ) {
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          subtotalAmount: amounts.subtotal,
+          vatPercent: amounts.vatPercent,
+          vatAmount: amounts.vatAmount,
+          totalAmount: amounts.totalAmount,
+        },
+      });
+    }
 
     rows.push({
       householdId: h.id,
@@ -152,6 +193,7 @@ export async function loadBillingSheetRows(
       routeName: h.collectionRoute?.name ?? null,
       routeSortOrder: h.routeSortOrder,
       residentName: h.residentName,
+      address: h.address,
       contactPhone: h.contactPhone ?? h.user?.phone ?? null,
       householdCode: h.householdCode,
       unitPrice,
@@ -160,7 +202,10 @@ export async function loadBillingSheetRows(
       csm,
       status: reading?.status ?? null,
       usageM3,
-      totalAmount,
+      totalAmount: amounts?.totalAmount ?? null,
+      subtotalAmount: amounts?.subtotal ?? null,
+      vatAmount: amounts?.vatAmount ?? null,
+      vatPercent: amounts?.vatPercent ?? null,
       hasImage: Boolean(reading?.imagePath),
       imagePath: reading?.imagePath ?? null,
       invoiceId: invoice?.id ?? null,
@@ -214,6 +259,7 @@ export async function loadRouteSummaries(periodId: string): Promise<RouteSummary
     where: { status: "ACTIVE", collectionRouteId: null },
   });
   if (noRoute > 0) {
+    const vatPercent = await getVatPercent();
     const rows = await prisma.household.findMany({
       where: { status: "ACTIVE", collectionRouteId: null },
       include: {
@@ -233,7 +279,13 @@ export async function loadRouteSummaries(periodId: string): Promise<RouteSummary
         const csm = reading.confirmedValue ?? reading.ocrValue ?? 0;
         const usage = calculateUsage(csm, reading.oldReading);
         totalUsageM3 += usage;
-        if (usage > 0) totalAmount += calculateTotal(usage, h.priceGroup.unitPrice);
+        if (usage > 0) {
+          totalAmount += calculateBillingAmounts(
+            usage,
+            h.priceGroup.unitPrice,
+            vatPercent
+          ).totalAmount;
+        }
       }
     }
     summaries.push({

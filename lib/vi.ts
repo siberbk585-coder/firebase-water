@@ -21,7 +21,7 @@ export const adminNav = [
     ? ([{ href: "/admin/payments", label: "Thu tiền" }] as const)
     : []),
   { href: "/admin/households", label: "Danh sách hộ" },
-  { href: "/admin/area-prices", label: "Giá khu vực" },
+  { href: "/admin/area-prices", label: "Giá & VAT" },
   { href: "/admin/audit-log", label: "Nhật ký" },
 ] as const;
 

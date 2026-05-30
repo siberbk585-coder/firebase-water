@@ -25,8 +25,8 @@ import {
   randomAddress,
   randomResidentName,
 } from "../lib/seed-data";
-import { calculateTotal } from "../lib/billing";
 import { unitPriceForHousehold } from "../lib/routePricing";
+import { calculateBillingAmounts } from "../lib/vat";
 
 const RESIDENT_COUNT = 50;
 const PASSWORD = "123456";
@@ -124,7 +124,7 @@ async function seedInvoice(
   status: InvoiceStatus
 ) {
   const unitPrice = unitPriceForHousehold(household);
-  const totalAmount = calculateTotal(usageM3, unitPrice);
+  const amounts = calculateBillingAmounts(usageM3, unitPrice, 10);
   const invoice = await prisma.invoice.upsert({
     where: {
       householdId_periodId: { householdId: household.id, periodId },
@@ -134,11 +134,22 @@ async function seedInvoice(
       periodId,
       usageM3,
       unitPrice,
-      totalAmount,
+      subtotalAmount: amounts.subtotal,
+      vatPercent: amounts.vatPercent,
+      vatAmount: amounts.vatAmount,
+      totalAmount: amounts.totalAmount,
       status,
       issuedAt: status !== InvoiceStatus.DRAFT ? new Date() : null,
     },
-    update: { usageM3, unitPrice, totalAmount, status },
+    update: {
+      usageM3,
+      unitPrice,
+      subtotalAmount: amounts.subtotal,
+      vatPercent: amounts.vatPercent,
+      vatAmount: amounts.vatAmount,
+      totalAmount: amounts.totalAmount,
+      status,
+    },
   });
 
   if (status === InvoiceStatus.PAID) {
@@ -150,13 +161,13 @@ async function seedInvoice(
       where: { invoiceId: invoice.id },
       create: {
         invoiceId: invoice.id,
-        amount: totalAmount,
+        amount: amounts.totalAmount,
         method: "CASH",
         note: "Mock seed",
         confirmedAt: new Date(),
         confirmedById: admin?.id,
       },
-      update: { amount: totalAmount, confirmedAt: new Date() },
+      update: { amount: amounts.totalAmount, confirmedAt: new Date() },
     });
   }
 }

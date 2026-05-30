@@ -130,8 +130,10 @@ Khi nhập/chốt kỳ hiện tại, CSC = `confirmedValue` kỳ **CONFIRMED** g
 ### 3.3 Công thức
 
 ```text
-usageM3   = max(0, CSM - CSC)
-totalAmount = round(usageM3 * unitPrice)   // VNĐ, lib/billing.ts
+usageM3    = max(0, CSM - CSC)
+gia        = round(usageM3 * unitPrice)              // lib/vat.ts → subtotal
+thueGTGT   = round(gia * vatPercent / 100)
+thanhTien  = gia + thueGTGT                         // totalAmount, lib/billing.ts preview
 ```
 
 `unitPrice`: từ nhóm giá hộ hoặc giá tuyến (`lib/routePricing.ts`).

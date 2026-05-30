@@ -1,7 +1,8 @@
 import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
-import { calculateTotal } from "./billing";
 import { unitPriceForHousehold } from "./routePricing";
 import { syncInvoiceForConfirmedReading } from "./invoices";
+import { calculateBillingAmounts, resolveInvoiceAmounts } from "./vat";
+import { getVatPercent } from "./vatServer";
 import { prisma } from "./db";
 import { generateInvoicePdf } from "./pdf";
 import { buildTransferNote } from "./paymentQr";
@@ -10,6 +11,7 @@ import {
   postInvoicePdfToN8nWebhook,
 } from "./n8nInvoicePdf";
 import { saveBuffer } from "./storage";
+import { getSession } from "./auth";
 import { formatPeriod, paymentMethodLabel } from "./vi";
 
 /** Đảm bảo có hóa đơn đã tính tổng tiền từ chỉ số đã chốt. */
@@ -60,10 +62,14 @@ export async function exportInvoicePdfLocal(invoiceId: string): Promise<{
   const unitPrice =
     invoice.unitPrice ?? unitPriceForHousehold(invoice.household);
   const usageM3 = invoice.usageM3 ?? reading.usageM3;
-  const totalAmount =
-    invoice.totalAmount ?? calculateTotal(usageM3, unitPrice);
+  const vatPercent = await getVatPercent();
+  const amounts =
+    invoice.subtotalAmount != null
+      ? resolveInvoiceAmounts(invoice, vatPercent)
+      : calculateBillingAmounts(usageM3, unitPrice, vatPercent);
   const periodLabel = formatPeriod(invoice.period.month, invoice.period.year);
   const invoiceCode = `HD-${invoice.period.year}${String(invoice.period.month).padStart(2, "0")}-${invoice.household.householdCode}`;
+  const session = await getSession();
 
   const pdf = await generateInvoicePdf({
     invoiceCode,
@@ -78,13 +84,19 @@ export async function exportInvoicePdfLocal(invoiceId: string): Promise<{
     newReading: reading.confirmedValue,
     usageM3,
     unitPrice,
-    totalAmount,
+    subtotalAmount: amounts.subtotal,
+    vatAmount: amounts.vatAmount,
+    vatPercent: amounts.vatPercent,
+    totalAmount: amounts.totalAmount,
     paymentMethod: paymentMethodLabel(invoice.household.paymentMethod),
     transferNote: buildTransferNote(
       invoice.household.meterCode,
       invoice.period.month,
       invoice.period.year
     ),
+    copyLabel: process.env.INVOICE_COPY_LABEL?.trim() || "2",
+    contactPhones: process.env.INVOICE_CONTACT_PHONES?.trim(),
+    collectorName: session?.name,
   });
 
   const filename = `${invoice.household.meterCode}_${invoice.period.year}-${invoice.period.month}.pdf`;
@@ -103,7 +115,7 @@ export async function exportInvoicePdfLocal(invoiceId: string): Promise<{
         householdCode: invoice.household.householdCode,
         meterCode: invoice.household.meterCode,
         periodLabel,
-        totalAmount,
+        totalAmount: amounts.totalAmount,
       });
       pdfPath = uploaded.url;
     } catch (error) {
@@ -121,7 +133,10 @@ export async function exportInvoicePdfLocal(invoiceId: string): Promise<{
       pdfPath,
       usageM3,
       unitPrice,
-      totalAmount,
+      subtotalAmount: amounts.subtotal,
+      vatPercent: amounts.vatPercent,
+      vatAmount: amounts.vatAmount,
+      totalAmount: amounts.totalAmount,
       status: InvoiceStatus.ISSUED,
       issuedAt: invoice.issuedAt ?? new Date(),
     },

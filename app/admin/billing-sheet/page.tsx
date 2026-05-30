@@ -20,6 +20,7 @@ import { BillingExcelPanel } from "@/components/BillingExcelPanel";
 import { BillingPrintPanel } from "@/components/BillingPrintPanel";
 import { BillingPrintSelectionProvider } from "@/components/billing-print-selection";
 import { formatPeriod } from "@/lib/vi";
+import { getVatPercent } from "@/lib/vatServer";
 
 export default async function BillingSheetPage({
   searchParams,
@@ -50,7 +51,11 @@ export default async function BillingSheetPage({
     durationMs,
   } = await searchParams;
   const statusFilter = parseBillingSheetStatusFilter(statusParam);
-  const [periods, routes] = await Promise.all([getBillingPeriods(), getCollectionRoutes()]);
+  const [periods, routes, vatPercent] = await Promise.all([
+    getBillingPeriods(),
+    getCollectionRoutes(),
+    getVatPercent(),
+  ]);
 
   const cal = currentCalendarPeriod();
   const activePeriod =
@@ -128,7 +133,7 @@ export default async function BillingSheetPage({
   ];
 
   return (
-    <>
+    <div className="billing-sheet-page">
       {(imported || paid || errors) && (
         <div className="card mb-3 border-[var(--primary)]/30 bg-[var(--primary-soft)]/35 py-3 text-sm">
           Đã xử lý Excel: cập nhật CSM <strong>{imported ?? 0}</strong> · Đã thu{" "}
@@ -275,6 +280,7 @@ export default async function BillingSheetPage({
           periodId={activePeriod.id}
           rows={filteredRows}
           statusFilter={statusFilter}
+          vatPercent={vatPercent}
           showRoute={isAll}
         />
         ) : (
@@ -309,6 +315,6 @@ export default async function BillingSheetPage({
           Tick chọn hàng · <strong>In hàng loạt</strong> hoặc cột <strong>Hóa đơn</strong> từng hộ
         </p>
       </BillingPrintSelectionProvider>
-    </>
+    </div>
   );
 }

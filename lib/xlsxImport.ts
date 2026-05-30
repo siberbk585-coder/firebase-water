@@ -288,13 +288,25 @@ export async function importPeriodRouteWorkbook(params: {
     if (!invoice) {
       const existing = await prisma.invoice.findUnique({
         where: { householdId_periodId: { householdId, periodId: params.periodId } },
-        select: { id: true, status: true, totalAmount: true },
+        select: {
+          id: true,
+          status: true,
+          usageM3: true,
+          unitPrice: true,
+          subtotalAmount: true,
+          vatPercent: true,
+          vatAmount: true,
+          totalAmount: true,
+        },
       });
       if (existing) {
         invoice = {
           id: existing.id,
-          usageM3: 0,
-          unitPrice: 0,
+          usageM3: existing.usageM3,
+          unitPrice: existing.unitPrice,
+          subtotalAmount: existing.subtotalAmount,
+          vatPercent: existing.vatPercent,
+          vatAmount: existing.vatAmount,
           totalAmount: existing.totalAmount,
           status: existing.status as InvoiceStatus,
         };

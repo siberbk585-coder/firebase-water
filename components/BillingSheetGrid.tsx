@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import type { BillingSheetRow } from "@/lib/billingSheet";
-import { formatCurrency, previewBillingRow } from "@/lib/billing";
+import {
+  formatBillingAmountCell,
+  formatCurrency,
+  previewBillingRow,
+  resolveBillingDisplay,
+  type BillingPreview,
+} from "@/lib/billing";
 import { readingStatusLabel } from "@/lib/vi";
 import { BillingSheetInvoiceBtn } from "@/components/BillingSheetInvoiceBtn";
 import { useBillingPrintSelectionOptional } from "@/components/billing-print-selection";
@@ -14,10 +20,48 @@ import {
 
 export type ReadingStatusFilter = BillingSheetStatusFilter;
 
+function rowPreview(
+  row: BillingSheetRow,
+  csm: number | null,
+  vatPercent: number
+): BillingPreview {
+  return previewBillingRow(row.oldReading, csm, row.unitPrice, vatPercent);
+}
+
+function BillingMoneyCells({
+  amounts,
+  showVat,
+}: {
+  amounts: BillingPreview;
+  showVat: boolean;
+}) {
+  if (!showVat) {
+    return (
+      <td className="billing-sheet-col-num billing-sheet-col-total text-right font-mono text-sm tabular-nums">
+        {formatBillingAmountCell(amounts.totalAmount)}
+      </td>
+    );
+  }
+  return (
+    <>
+      <td className="billing-sheet-col-num billing-sheet-col-gia text-right font-mono text-sm tabular-nums text-[var(--muted)]">
+        {formatBillingAmountCell(amounts.subtotal)}
+      </td>
+      <td className="billing-sheet-col-num billing-sheet-col-vat text-right font-mono text-sm tabular-nums text-[var(--muted)]">
+        {formatBillingAmountCell(amounts.vatAmount)}
+      </td>
+      <td className="billing-sheet-col-num billing-sheet-col-total text-right font-mono text-sm font-semibold tabular-nums">
+        {formatBillingAmountCell(amounts.totalAmount)}
+      </td>
+    </>
+  );
+}
+
 type Props = {
   periodId: string;
   rows: BillingSheetRow[];
   statusFilter?: BillingSheetStatusFilter;
+  vatPercent?: number;
   /** Bảng tổng — hiện cột khu vực */
   showRoute?: boolean;
 };
@@ -26,6 +70,7 @@ export function BillingSheetGrid({
   periodId,
   rows,
   statusFilter = "all",
+  vatPercent = 0,
   showRoute = false,
 }: Props) {
   const [localRows, setLocalRows] = useState(rows);
@@ -95,12 +140,14 @@ export function BillingSheetGrid({
     invoice?: {
       id: string;
       totalAmount: number;
+      subtotalAmount?: number;
+      vatAmount?: number;
       usageM3: number;
       status?: InvoiceStatus;
     } | null
   ) {
     const csm = reading.confirmedValue ?? 0;
-    const preview = previewBillingRow(oldReading, csm, unitPrice);
+    const preview = previewBillingRow(oldReading, csm, unitPrice, vatPercent);
     setLocalRows((prev) =>
       prev.map((r) =>
         r.householdId === householdId
@@ -110,6 +157,8 @@ export function BillingSheetGrid({
               csm,
               status: reading.status,
               usageM3: invoice?.usageM3 ?? reading.usageM3 ?? preview.usageM3,
+              subtotalAmount: invoice?.subtotalAmount ?? preview.subtotal,
+              vatAmount: invoice?.vatAmount ?? preview.vatAmount,
               totalAmount: invoice?.totalAmount ?? preview.totalAmount,
               invoiceId: invoice?.id ?? r.invoiceId,
               invoiceStatus: invoice?.status ?? r.invoiceStatus,
@@ -319,16 +368,19 @@ export function BillingSheetGrid({
   function getRowState(row: BillingSheetRow) {
     const draft = getDraft(row.householdId, row);
     const draftNum = draft === "" ? null : parseFloat(draft);
-    const preview =
-      draftNum != null && !Number.isNaN(draftNum)
-        ? previewBillingRow(row.oldReading, draftNum, row.unitPrice)
-        : row.csm != null
-          ? previewBillingRow(row.oldReading, row.csm, row.unitPrice)
-          : previewBillingRow(row.oldReading, null, row.unitPrice);
+    const usePreview = draftNum != null && !Number.isNaN(draftNum);
+    const preview = usePreview
+      ? rowPreview(row, draftNum, vatPercent)
+      : row.csm != null
+        ? rowPreview(row, row.csm, vatPercent)
+        : rowPreview(row, null, vatPercent);
+    const amounts = resolveBillingDisplay(row, preview, usePreview);
     const missing = row.csm == null && draft === "";
     const pending = row.status === ReadingStatus.PENDING;
-    return { draft, missing, pending, preview };
+    return { draft, missing, pending, amounts };
   }
+
+  const showVatColumns = vatPercent > 0;
 
   if (!filteredRows.length) {
     return (
@@ -365,7 +417,7 @@ export function BillingSheetGrid({
         )}
 
         {filteredRows.map((row, index) => {
-          const { draft, missing, pending, preview } = getRowState(row);
+          const { draft, missing, pending, amounts } = getRowState(row);
           const cardClass = [
             "mobile-action-card",
             missing ? "border-amber-200 bg-amber-50/80" : "",
@@ -448,13 +500,29 @@ export function BillingSheetGrid({
                 <div>
                   <span className="mobile-meta-label">Tiêu thụ</span>
                   <span className="font-mono font-semibold tabular-nums">
-                    {preview.usageM3 != null ? `${preview.usageM3} m³` : "—"}
+                    {amounts.usageM3 != null ? `${amounts.usageM3} m³` : "—"}
                   </span>
                 </div>
-                <div>
-                  <span className="mobile-meta-label">Tiền</span>
+                {showVatColumns ? (
+                  <>
+                    <div>
+                      <span className="mobile-meta-label">Giá</span>
+                      <span className="font-mono tabular-nums text-[var(--muted)]">
+                        {formatBillingAmountCell(amounts.subtotal)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="mobile-meta-label">GTGT {vatPercent}%</span>
+                      <span className="font-mono tabular-nums text-[var(--muted)]">
+                        {formatBillingAmountCell(amounts.vatAmount)}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
+                <div className={showVatColumns ? "col-span-2" : ""}>
+                  <span className="mobile-meta-label">Thành tiền</span>
                   <span className="font-mono font-semibold tabular-nums">
-                    {preview.totalLabel}
+                    {formatBillingAmountCell(amounts.totalAmount)}
                   </span>
                 </div>
               </div>
@@ -554,9 +622,9 @@ export function BillingSheetGrid({
         })}
       </div>
 
-      <div className="hidden overflow-x-auto card p-0 md:block">
-      <table className="table-modern billing-sheet-table min-w-[960px]">
-        <thead className="sticky top-0 z-10 border-b bg-slate-100 text-left text-xs">
+      <div className="billing-sheet-scroll card hidden p-0 md:block">
+      <table className="table-modern billing-sheet-table">
+        <thead className="border-b text-left text-xs">
           <tr>
             {printSelection && (
               <th className="w-10 text-center" title="Chọn hộ để in hóa đơn">
@@ -575,41 +643,68 @@ export function BillingSheetGrid({
             <th className="w-10" title="Thứ tự trên tuyến">
               #
             </th>
-            {showRoute && <th className="w-28">Khu vực</th>}
-            <th>Họ tên</th>
-            <th className="w-24">Mã hộ</th>
-            <th className="w-16 text-right" title="Chỉ số cũ">
+            {showRoute && (
+              <th className="billing-sheet-col-route">Khu vực</th>
+            )}
+            <th className="billing-sheet-col-name">Họ tên · Mã hộ</th>
+            <th
+              className="billing-sheet-col-num billing-sheet-col-old text-right"
+              title="Chỉ số cũ"
+            >
               Số cũ
             </th>
-            <th className="w-28 text-right" title="Chỉ số mới — nhập tại đây">
+            <th
+              className="billing-sheet-col-num billing-sheet-col-new text-right"
+              title="Chỉ số mới — nhập tại đây"
+            >
               Số mới
             </th>
-            <th className="w-14 text-right" title="Tiêu thụ m³">
+            <th
+              className="billing-sheet-col-num billing-sheet-col-m3 text-right"
+              title="Tiêu thụ m³"
+            >
               m³
             </th>
-            <th className="w-24 text-right">Tiền</th>
-            <th className="w-16 text-center">Hóa đơn</th>
-            <th className="w-32 text-center">Chỉ số tháng này</th>
+            {showVatColumns ? (
+              <>
+                <th
+                  className="billing-sheet-col-num billing-sheet-col-gia text-right"
+                  title="m³ × đơn giá"
+                >
+                  Giá
+                </th>
+                <th
+                  className="billing-sheet-col-num billing-sheet-col-vat text-right"
+                  title={`Thuế GTGT ${vatPercent}%`}
+                >
+                  GTGT
+                </th>
+                <th
+                  className="billing-sheet-col-num billing-sheet-col-total text-right"
+                  title="Giá + Thuế GTGT"
+                >
+                  Thành tiền
+                </th>
+              </>
+            ) : (
+              <th className="billing-sheet-col-num billing-sheet-col-total text-right">
+                Thành tiền
+              </th>
+            )}
+            <th className="billing-sheet-col-invoice text-center">Hóa đơn</th>
+            <th className="billing-sheet-col-actions text-center">Chỉ số tháng này</th>
             <th
-              className="w-28 text-center"
+              className="billing-sheet-col-pay text-center"
               title="Bấm nút vàng「Xác nhận đã thu tiền」khi hộ đã nộp"
             >
               Xác nhận thu
             </th>
-            <th className="w-20 text-center">Ảnh</th>
+            <th className="w-16 shrink-0 text-center">Ảnh</th>
           </tr>
         </thead>
         <tbody>
           {filteredRows.map((row, index) => {
-            const draft = getDraft(row.householdId, row);
-            const draftNum = draft === "" ? null : parseFloat(draft);
-            const preview =
-              draftNum != null && !Number.isNaN(draftNum)
-                ? previewBillingRow(row.oldReading, draftNum, row.unitPrice)
-                : row.csm != null
-                  ? previewBillingRow(row.oldReading, row.csm, row.unitPrice)
-                  : previewBillingRow(row.oldReading, null, row.unitPrice);
-
+            const { draft, amounts: rowAmounts } = getRowState(row);
             const missing = row.csm == null && draft === "";
             const pending = row.status === ReadingStatus.PENDING;
             const rowClass = [
@@ -642,19 +737,30 @@ export function BillingSheetGrid({
                   {row.routeSortOrder ?? index + 1}
                 </td>
                 {showRoute && (
-                  <td className="text-xs text-[var(--muted)]">{row.routeName ?? "—"}</td>
+                  <td className="billing-sheet-col-route truncate text-xs text-[var(--muted)]">
+                    {row.routeName ?? "—"}
+                  </td>
                 )}
-                <td className="font-medium">{row.residentName}</td>
-                <td className="font-mono text-sm font-semibold">{row.householdCode}</td>
-                <td className="text-right font-mono tabular-nums">{row.oldReading}</td>
-                <td className="text-right">
+                <td
+                  className="billing-sheet-col-name font-medium"
+                  title={`${row.residentName} · ${row.householdCode}`}
+                >
+                  <div className="truncate leading-snug">{row.residentName}</div>
+                  <div className="truncate font-mono text-xs font-semibold text-[var(--muted)]">
+                    {row.householdCode}
+                  </div>
+                </td>
+                <td className="billing-sheet-col-num billing-sheet-col-old text-right font-mono tabular-nums">
+                  {row.oldReading}
+                </td>
+                <td className="billing-sheet-col-num billing-sheet-col-new text-right">
                   <input
                     ref={(el) => {
                       inputRefs.current[row.householdId] = el;
                     }}
                     type="number"
                     inputMode="decimal"
-                    className="input w-full max-w-[7rem] py-1 text-right font-mono tabular-nums disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="billing-sheet-csm-input input py-1 text-right font-mono tabular-nums disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="—"
                     value={draft}
                     disabled={row.paid}
@@ -668,19 +774,12 @@ export function BillingSheetGrid({
                       }
                     }}
                   />
-                  {pending && (
-                    <span className="badge badge-warning mt-0.5 block text-[10px]">
-                      Chờ chốt
-                    </span>
-                  )}
                 </td>
-                <td className="text-right font-mono tabular-nums">
-                  {preview.usageM3 != null ? preview.usageM3 : "—"}
+                <td className="billing-sheet-col-num billing-sheet-col-m3 text-right font-mono tabular-nums">
+                  {rowAmounts.usageM3 != null ? rowAmounts.usageM3 : "—"}
                 </td>
-                <td className="text-right font-mono tabular-nums text-sm">
-                  {preview.totalLabel}
-                </td>
-                <td className="billing-invoice-cell text-center">
+                <BillingMoneyCells amounts={rowAmounts} showVat={showVatColumns} />
+                <td className="billing-invoice-cell billing-sheet-col-invoice text-center">
                   <BillingSheetInvoiceBtn
                     periodId={periodId}
                     householdId={row.householdId}
@@ -695,8 +794,8 @@ export function BillingSheetGrid({
                     }
                   />
                 </td>
-                <td className="space-y-1 text-center text-xs">
-                  <div className="mx-auto flex max-w-[7rem] flex-col gap-1">
+                <td className="billing-sheet-col-actions space-y-1 text-center text-xs">
+                  <div className="mx-auto flex min-w-[6.5rem] flex-col gap-1">
                     {row.paid ? (
                       <span
                         className="text-[10px] text-[var(--muted)]"
@@ -743,7 +842,7 @@ export function BillingSheetGrid({
                     </p>
                   )}
                 </td>
-                <td className="text-center text-xs">
+                <td className="billing-sheet-col-pay text-center text-xs">
                   {row.paid ? (
                     <span className="badge badge-success">Đã thu</span>
                   ) : row.invoiceId ? (

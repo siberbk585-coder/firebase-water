@@ -3,6 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/guards";
+import { updateSystemSettings } from "@/lib/settings";
+import { normalizeVatPercent } from "@/lib/vat";
+
+export async function saveVatSettings(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const raw = String(formData.get("vatPercent") ?? "").trim().replace(",", ".");
+  const parsed = parseFloat(raw);
+  if (Number.isNaN(parsed)) {
+    throw new Error("Thuế VAT không hợp lệ");
+  }
+  const vatPercent = normalizeVatPercent(parsed);
+  await updateSystemSettings({ vatPercent });
+  revalidatePath("/admin/area-prices");
+  revalidatePath("/admin/billing-sheet");
+}
 
 export async function saveRoutePrices(formData: FormData): Promise<void> {
   await requireAdmin();

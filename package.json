@@ -8,6 +8,7 @@
     "build": "node scripts/prepare-db-env.mjs && prisma generate && next build",
     "build:with-migrate": "node scripts/prepare-db-env.mjs && prisma generate && prisma migrate deploy && next build",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:apply-vat": "prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20260530120000_vat_settings/migration.sql",
     "start": "next start",
     "lint": "eslint",
     "test": "node --import tsx --test __tests__/*.test.ts",

@@ -2,6 +2,7 @@ import { PDFDocument } from "pdf-lib";
 import { Resvg } from "@resvg/resvg-js";
 import { join } from "path";
 import { amountInWordsVn } from "./amountInWords";
+import { displayResidentName } from "./receiptDisplay";
 import { fetchPaymentQrImage } from "./paymentQr";
 
 /** Font kiểu máy in bill / siêu thị (monospace, hẹp). */
@@ -34,6 +35,9 @@ export type InvoicePdfData = {
   newReading: number;
   usageM3: number;
   unitPrice: number;
+  subtotalAmount: number;
+  vatAmount: number;
+  vatPercent?: number;
   totalAmount: number;
   transferNote?: string;
   paymentMethod?: string;
@@ -62,6 +66,11 @@ function formatUsageM3(value: number): string {
   const rounded = Math.round(value * 1000) / 1000;
   if (Number.isInteger(rounded)) return formatReceiptInt(rounded);
   return rounded.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
+}
+
+/** Đơn giá trên bill — giống app (số nguyên, dấu chấm nghìn). */
+function formatReceiptUnitPrice(value: number): string {
+  return formatReceiptInt(value);
 }
 
 function issuerName(): string {
@@ -170,15 +179,6 @@ function labelLine(y: number, label: string, value: string): string {
   return receiptText(PAD, y, `${label} ${value}`, { size: 20, weight: 400 });
 }
 
-function vatBreakdown(totalAmount: number): { subtotal: number; vatAmount: number } {
-  const rate = Number(process.env.INVOICE_VAT_RATE ?? 0);
-  if (!rate || rate <= 0) {
-    return { subtotal: Math.round(totalAmount), vatAmount: 0 };
-  }
-  const subtotal = Math.round(totalAmount / (1 + rate));
-  return { subtotal, vatAmount: Math.round(totalAmount) - subtotal };
-}
-
 function periodCopyLabel(data: InvoicePdfData): string {
   const copy = data.copyLabel?.trim() || process.env.INVOICE_COPY_LABEL?.trim() || "1";
   const month =
@@ -202,7 +202,8 @@ function qrDataUri(buffer: Buffer | null): string | null {
 }
 
 function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
-  const { subtotal, vatAmount } = vatBreakdown(data.totalAmount);
+  const subtotal = Math.round(data.subtotalAmount);
+  const vatAmount = Math.round(data.vatAmount);
   const paymentMethod = data.paymentMethod?.trim() || "Tiền mặt";
   const arrears = data.arrearsM3 ?? 0;
   const parts: string[] = [];
@@ -242,7 +243,13 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   );
   gap(20);
 
-  push(labelLine(y, "Tên KH:", data.residentName.toUpperCase()));
+  push(
+    labelLine(
+      y,
+      "Tên KH:",
+      displayResidentName(data.residentName, data.householdCode).toUpperCase()
+    )
+  );
   gap(LINE_H);
   push(labelLine(y, "Mã KH:", data.householdCode));
   gap(LINE_H);
@@ -286,7 +293,7 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
     receiptText(
       MID,
       y,
-      `${formatUsageM3(data.usageM3)}  |  ${formatReceiptInt(data.unitPrice)}  |  ${formatReceiptInt(subtotal)}`,
+      `${formatUsageM3(data.usageM3)}  |  ${formatReceiptUnitPrice(data.unitPrice)}  |  ${formatReceiptInt(subtotal)}`,
       { size: 20,
         weight: 700,
         anchor: "middle",
@@ -331,6 +338,9 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   push(dashedRule(y));
   gap(12);
 
+  push(labelLine(y, "Đ/c:", ""));
+  gap(LINE_H);
+
   const phones = data.contactPhones?.trim() || process.env.INVOICE_CONTACT_PHONES?.trim();
   if (phones) {
     push(labelLine(y, "LH:", phones));
@@ -346,7 +356,7 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
     gap(LINE_H);
   }
 
-  if (qrUri && process.env.INVOICE_RECEIPT_QR !== "false") {
+  if (qrUri && process.env.INVOICE_RECEIPT_QR === "true") {
     gap(12);
     const qrSize = 140;
     push(

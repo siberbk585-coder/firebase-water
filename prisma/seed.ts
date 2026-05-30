@@ -44,14 +44,18 @@ async function seedInvoiceForReading(
   opts?: { paid?: boolean }
 ) {
   const unitPrice = unitPriceForHousehold(household);
-  const totalAmount = calculateTotal(usageM3, unitPrice);
+  const { calculateBillingAmounts } = await import("../lib/vat");
+  const amounts = calculateBillingAmounts(usageM3, unitPrice, 10);
   const invoice = await prisma.invoice.create({
     data: {
       householdId: household.id,
       periodId,
       usageM3,
       unitPrice,
-      totalAmount,
+      subtotalAmount: amounts.subtotal,
+      vatPercent: amounts.vatPercent,
+      vatAmount: amounts.vatAmount,
+      totalAmount: amounts.totalAmount,
       status: opts?.paid ? InvoiceStatus.PAID : InvoiceStatus.ISSUED,
       issuedAt: new Date(),
     },
@@ -64,7 +68,7 @@ async function seedInvoiceForReading(
     await prisma.payment.create({
       data: {
         invoiceId: invoice.id,
-        amount: totalAmount,
+        amount: amounts.totalAmount,
         method: "CASH",
         note: "Seed demo",
         confirmedAt: new Date(),

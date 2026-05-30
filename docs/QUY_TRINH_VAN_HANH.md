@@ -44,6 +44,20 @@
 
 **Chốt kỳ liên tiếp:** Không chốt tháng N nếu tháng N−1 chưa **Đã xác nhận** (ví dụ không chốt T5 khi T4 chưa chốt). Hóa đơn T4 đã phát nhưng **chưa thu** vẫn được chốt T5 bình thường.
 
+## Mẫu biên nhận in (PDF / Bluetooth)
+
+Trường trên bill: tên HTX, **BIÊN NHẬN THANH TOÁN**, `T5(Liên 2)`, Tên KH, Mã KH, Địa chỉ, NĐK/NCK, Hình thức TT, Nội dung, CS cũ/mới, SL truy thu, bảng SL(m³)|Đơn giá|Thành tiền (tiền trước thuế), Thuế GTGT, Tổng tiền, Bằng chữ, Đ/c, LH, Ngày, NV thu.
+
+- Web PDF: `lib/pdf.ts` + `lib/receiptDisplay.ts` (cùng layout app; QR tắt mặc định — `INVOICE_RECEIPT_QR=true` nếu cần).
+- App Android: `receipt_builder.dart` (ESC/POS 58mm / 80mm).
+
+## Thuế VAT (GTGT)
+
+- Cấu hình tại **Giá & VAT** (`/admin/area-prices`): % VAT áp dụng toàn hệ thống (mặc định 10%).
+- Công thức: **Giá** = m³ × đơn giá khu vực → **Thuế GTGT** = làm tròn(Giá × %) → **Thành tiền** = Giá + Thuế GTGT.
+- Hóa đơn lưu `subtotal_amount`, `vat_percent`, `vat_amount`, `total_amount` trên bảng `invoice`.
+- Hóa đơn **đã phát hành / đã thu** không tự đổi số khi sửa % VAT.
+
 ## Kỳ thu tự động
 
 - Hệ thống **tự tạo kỳ tháng hiện tại** (theo giờ `Asia/Ho_Chi_Minh`) khi mở bảng thu, tổng quan hoặc app mobile.

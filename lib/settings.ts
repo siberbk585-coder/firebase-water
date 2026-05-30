@@ -6,7 +6,7 @@ const SETTINGS_ID = "default";
 export async function getSystemSettings() {
   return prisma.systemSettings.upsert({
     where: { id: SETTINGS_ID },
-    create: { id: SETTINGS_ID },
+    create: { id: SETTINGS_ID, vatPercent: 10 },
     update: {},
   });
 }
@@ -14,10 +14,14 @@ export async function getSystemSettings() {
 export async function updateSystemSettings(data: {
   periodCloseDay?: number;
   timezone?: string;
+  vatPercent?: number;
 }) {
   const day = data.periodCloseDay;
   if (day != null && (day < 1 || day > 28)) {
     throw new Error("Ngày đóng kỳ phải từ 1 đến 28");
+  }
+  if (data.vatPercent != null && (data.vatPercent < 0 || data.vatPercent > 100)) {
+    throw new Error("Thuế VAT phải từ 0 đến 100%");
   }
   return prisma.systemSettings.upsert({
     where: { id: SETTINGS_ID },
@@ -25,10 +29,12 @@ export async function updateSystemSettings(data: {
       id: SETTINGS_ID,
       periodCloseDay: day ?? 25,
       timezone: data.timezone ?? "Asia/Ho_Chi_Minh",
+      vatPercent: data.vatPercent ?? 10,
     },
     update: {
       ...(day != null ? { periodCloseDay: day } : {}),
       ...(data.timezone ? { timezone: data.timezone } : {}),
+      ...(data.vatPercent != null ? { vatPercent: data.vatPercent } : {}),
     },
   });
 }

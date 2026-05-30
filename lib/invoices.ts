@@ -1,12 +1,20 @@
 import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
-import { calculateTotal } from "./billing";
 import { prisma } from "./db";
 import { unitPriceForHousehold } from "./routePricing";
+import {
+  calculateBillingAmounts,
+  invoiceNeedsVatBackfill,
+  resolveInvoiceAmounts,
+} from "./vat";
+import { getVatPercent } from "./vatServer";
 
 export type SyncedInvoice = {
   id: string;
   usageM3: number;
   unitPrice: number;
+  subtotalAmount: number;
+  vatPercent: number;
+  vatAmount: number;
   totalAmount: number;
   status: InvoiceStatus;
 };
@@ -33,20 +41,43 @@ export async function syncInvoiceForConfirmedReading(
   // Không cập nhật hóa đơn đã phát hành (ISSUED) hoặc đã thu (PAID)
   const existing = await prisma.invoice.findUnique({
     where: { householdId_periodId: { householdId, periodId } },
-    select: { id: true, status: true, unitPrice: true, totalAmount: true, usageM3: true },
+    select: {
+      id: true,
+      status: true,
+      unitPrice: true,
+      subtotalAmount: true,
+      vatPercent: true,
+      vatAmount: true,
+      totalAmount: true,
+      usageM3: true,
+    },
   });
-  if (existing?.status === InvoiceStatus.ISSUED || existing?.status === InvoiceStatus.PAID) {
+  const unitPrice = unitPriceForHousehold(reading.household);
+  const vatPercent = await getVatPercent();
+
+  if (
+    existing?.status === InvoiceStatus.PAID ||
+    existing?.status === InvoiceStatus.CANCELLED
+  ) {
     return {
       id: existing.id,
       usageM3: existing.usageM3,
       unitPrice: existing.unitPrice,
+      subtotalAmount: existing.subtotalAmount,
+      vatPercent: existing.vatPercent,
+      vatAmount: existing.vatAmount,
       totalAmount: existing.totalAmount,
       status: existing.status,
     };
   }
 
-  const unitPrice = unitPriceForHousehold(reading.household);
-  const totalAmount = calculateTotal(reading.usageM3, unitPrice);
+  const amounts =
+    existing?.status === InvoiceStatus.ISSUED &&
+    !invoiceNeedsVatBackfill(existing, vatPercent) &&
+    existing.usageM3 === reading.usageM3 &&
+    existing.unitPrice === unitPrice
+      ? resolveInvoiceAmounts(existing, vatPercent)
+      : calculateBillingAmounts(reading.usageM3, unitPrice, vatPercent);
 
   const invoice = await prisma.invoice.upsert({
     where: { householdId_periodId: { householdId, periodId } },
@@ -55,14 +86,20 @@ export async function syncInvoiceForConfirmedReading(
       periodId,
       usageM3: reading.usageM3,
       unitPrice,
-      totalAmount,
+      subtotalAmount: amounts.subtotal,
+      vatPercent: amounts.vatPercent,
+      vatAmount: amounts.vatAmount,
+      totalAmount: amounts.totalAmount,
       status: InvoiceStatus.ISSUED,
       issuedAt: new Date(),
     },
     update: {
       usageM3: reading.usageM3,
       unitPrice,
-      totalAmount,
+      subtotalAmount: amounts.subtotal,
+      vatPercent: amounts.vatPercent,
+      vatAmount: amounts.vatAmount,
+      totalAmount: amounts.totalAmount,
       status: InvoiceStatus.ISSUED,
       issuedAt: new Date(),
     },
@@ -72,6 +109,9 @@ export async function syncInvoiceForConfirmedReading(
     id: invoice.id,
     usageM3: invoice.usageM3,
     unitPrice: invoice.unitPrice,
+    subtotalAmount: invoice.subtotalAmount,
+    vatPercent: invoice.vatPercent,
+    vatAmount: invoice.vatAmount,
     totalAmount: invoice.totalAmount,
     status: invoice.status,
   };

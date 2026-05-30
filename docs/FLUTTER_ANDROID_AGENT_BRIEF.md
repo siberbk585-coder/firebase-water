@@ -274,10 +274,11 @@ Content-Type: application/json
 
 ```text
 usageM3 = max(0, confirmedValue - oldReading)
-totalAmount = round(usageM3 * unitPrice)
+gia = round(usageM3 * unitPrice)
+thanhTien = gia + round(gia * vatPercent / 100)
 ```
 
-(`lib/billing.ts`)
+(`lib/vat.ts`, `lib/billing.ts`)
 
 #### Xuất PDF một hộ (tạo HĐ nếu chưa có)
 

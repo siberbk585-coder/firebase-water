@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { currentCalendarPeriod, getBillingPeriods, getCollectionRoutes } from "@/lib/billingSheet";
 import { formatPeriod } from "@/lib/vi";
+import { getVatPercent } from "@/lib/vatServer";
 import { UserRole } from "@/lib/types/enums";
 
 export async function GET() {
@@ -10,9 +11,10 @@ export async function GET() {
     return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
   }
 
-  const [periods, routes] = await Promise.all([
+  const [periods, routes, vatPercent] = await Promise.all([
     getBillingPeriods(),
     getCollectionRoutes(),
+    getVatPercent(),
   ]);
 
   const cal = currentCalendarPeriod();
@@ -42,5 +44,11 @@ export async function GET() {
       name: r.name,
       sortOrder: r.sortOrder,
     })),
+    receipt: {
+      vatPercent,
+      contactPhones:
+        process.env.INVOICE_CONTACT_PHONES?.trim() ?? "0973065179 - 0335345620",
+      copyLabel: process.env.INVOICE_COPY_LABEL?.trim() ?? "2",
+    },
   });
 }

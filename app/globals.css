@@ -206,10 +206,129 @@ a {
   color: var(--foreground);
 }
 
+/* Trang bảng thu — full width viewport (vượt max-w-7xl của shell) */
+@media (min-width: 768px) {
+  .billing-sheet-page {
+    position: relative;
+    left: 50%;
+    right: 50%;
+    box-sizing: border-box;
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    padding-left: clamp(0.75rem, 1.25vw, 1.25rem);
+    padding-right: clamp(0.75rem, 1.25vw, 1.25rem);
+  }
+}
+
+/* Bảng thu — cuộn ngang khi cần; desktop kịch khung */
+.billing-sheet-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+.billing-sheet-page .billing-sheet-scroll {
+  max-width: none;
+}
+
+.table-modern.billing-sheet-table {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+@media (min-width: 768px) {
+  .billing-sheet-page .table-modern.billing-sheet-table {
+    width: 100%;
+    min-width: 100%;
+  }
+}
+
 .billing-sheet-table thead th {
   position: sticky;
   top: 0;
   z-index: 10;
+  background: #f1f5f9;
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+
+.billing-sheet-table tbody td {
+  overflow: visible;
+}
+
+/* Cột số / tiền — đủ rộng cho "247.500 ₫" */
+.billing-sheet-table .billing-sheet-col-num {
+  white-space: nowrap;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.billing-sheet-table .billing-sheet-col-old {
+  min-width: 4.5rem;
+}
+
+.billing-sheet-table .billing-sheet-col-new {
+  width: 4.75rem;
+  min-width: 4.75rem;
+  max-width: 4.75rem;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+}
+
+.billing-sheet-table .billing-sheet-csm-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 4rem;
+  margin-left: auto;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+}
+
+.billing-sheet-table .billing-sheet-col-m3 {
+  min-width: 3.5rem;
+}
+
+.billing-sheet-table .billing-sheet-col-gia {
+  min-width: 6.75rem;
+}
+
+.billing-sheet-table .billing-sheet-col-vat {
+  min-width: 6rem;
+}
+
+.billing-sheet-table .billing-sheet-col-total {
+  min-width: 7.75rem;
+}
+
+.billing-sheet-table .billing-sheet-col-name {
+  min-width: 9rem;
+  width: 18%;
+}
+
+.billing-sheet-page .billing-sheet-table .billing-sheet-col-name {
+  max-width: none;
+  width: auto;
+}
+
+.billing-sheet-table .billing-sheet-col-route {
+  min-width: 6.5rem;
+  max-width: 9rem;
+}
+
+.billing-sheet-table .billing-sheet-col-invoice {
+  min-width: 5.75rem;
+}
+
+.billing-sheet-table .billing-sheet-col-actions {
+  min-width: 7rem;
+}
+
+.billing-sheet-table .billing-sheet-col-pay {
+  min-width: 6.5rem;
 }
 
 /* Nút / ô hóa đơn — gợi máy in bill siêu thị */

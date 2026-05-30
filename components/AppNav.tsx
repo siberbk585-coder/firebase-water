@@ -56,6 +56,7 @@ function compactMobileLabel(label: string): string {
     "Tổng quan": "Tổng quan",
     "Bảng thu nước": "Bảng thu",
     "Thu tiền": "Thu tiền",
+    "Giá & VAT": "Giá & VAT",
     "Danh sách hộ": "Hộ dân",
   };
   return map[label] ?? label;
