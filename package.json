@@ -36,6 +36,7 @@
     "db:update-addresses-haiphong": "tsx scripts/update-addresses-haiphong.mjs",
     "db:reshape-mock-periods": "tsx scripts/reshape-mock-periods.ts",
     "db:refresh-pending-old-readings": "tsx scripts/refresh-pending-old-readings.ts",
+    "db:backfill-invoice-vat": "tsx scripts/backfill-invoice-vat.ts",
     "db:audit": "tsx scripts/db-audit.ts",
     "db:dedupe-names": "tsx scripts/dedupe-resident-names.ts",
     "dataconnect:generate": "npx -y firebase-tools@latest dataconnect:sdk:generate",
