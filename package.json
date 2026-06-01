@@ -35,6 +35,7 @@
     "firebase:seed-mock-50": "tsx scripts/seed-mock-50.ts",
     "db:update-addresses-haiphong": "tsx scripts/update-addresses-haiphong.mjs",
     "db:reshape-mock-periods": "tsx scripts/reshape-mock-periods.ts",
+    "db:refresh-pending-old-readings": "tsx scripts/refresh-pending-old-readings.ts",
     "db:audit": "tsx scripts/db-audit.ts",
     "db:dedupe-names": "tsx scripts/dedupe-resident-names.ts",
     "dataconnect:generate": "npx -y firebase-tools@latest dataconnect:sdk:generate",

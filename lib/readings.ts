@@ -37,6 +37,45 @@ export async function getAvgUsage3Months(
   return usages.reduce((a, b) => a + b, 0) / usages.length;
 }
 
+/** CSC hiển thị / tính tiền: kỳ đã chốt giữ CSC đã lưu; kỳ chưa chốt lấy CSM kỳ CONFIRMED gần nhất trước đó. */
+export function resolveOldReadingForRow(
+  reading: { status: ReadingStatus; oldReading: number } | null,
+  chainOldReading: number
+): number {
+  if (reading?.status === ReadingStatus.CONFIRMED) {
+    return reading.oldReading;
+  }
+  return chainOldReading;
+}
+
+/**
+ * Sau khi chốt kỳ N: cập nhật CSC các kỳ sau (PENDING/REJECTED) = CSM vừa chốt.
+ * VD: T4 chốt 160 → T5, T6 (chưa chốt) có CSC 160; T5 chốt 165 → T6 có CSC 165.
+ */
+export async function propagateOldReadingAfterConfirm(
+  householdId: string,
+  confirmedPeriod: { year: number; month: number },
+  confirmedValue: number
+): Promise<number> {
+  const result = await prisma.meterReading.updateMany({
+    where: {
+      householdId,
+      status: { in: [ReadingStatus.PENDING, ReadingStatus.REJECTED] },
+      period: {
+        OR: [
+          { year: { gt: confirmedPeriod.year } },
+          {
+            year: confirmedPeriod.year,
+            month: { gt: confirmedPeriod.month },
+          },
+        ],
+      },
+    },
+    data: { oldReading: confirmedValue },
+  });
+  return result.count;
+}
+
 export async function getOldReading(householdId: string, periodId: string): Promise<number> {
   const period = await prisma.billingPeriod.findUniqueOrThrow({ where: { id: periodId } });
   const prev = await prisma.meterReading.findFirst({
@@ -72,9 +111,11 @@ export async function confirmReading(params: {
 
   await assertPriorPeriodReadingConfirmed(reading.householdId, reading.period);
 
+  const oldReading = await getOldReading(reading.householdId, reading.periodId);
+
   const avg = await getAvgUsage3Months(reading.householdId, reading.periodId);
   const anomaly = detectAnomalies({
-    oldReading: reading.oldReading,
+    oldReading,
     newReading: params.confirmedValue,
     avgUsage3Months: avg,
   });
@@ -87,11 +128,12 @@ export async function confirmReading(params: {
     throw new Error(anomaly.message ?? "Không thể lưu chỉ số");
   }
 
-  const usageM3 = calculateUsage(params.confirmedValue, reading.oldReading);
+  const usageM3 = calculateUsage(params.confirmedValue, oldReading);
 
-  return prisma.meterReading.update({
+  const updated = await prisma.meterReading.update({
     where: { id: reading.id },
     data: {
+      oldReading,
       confirmedValue: params.confirmedValue,
       inputMethod: params.inputMethod,
       usageM3,
@@ -100,6 +142,14 @@ export async function confirmReading(params: {
       confirmedAt: new Date(),
     },
   });
+
+  await propagateOldReadingAfterConfirm(
+    reading.householdId,
+    { year: reading.period.year, month: reading.period.month },
+    params.confirmedValue
+  );
+
+  return updated;
 }
 
 export function readingLastUpdatedAt(reading: {

@@ -44,6 +44,8 @@
 
 **Chốt kỳ liên tiếp:** Không chốt tháng N nếu tháng N−1 chưa **Đã xác nhận** (ví dụ không chốt T5 khi T4 chưa chốt). Hóa đơn T4 đã phát nhưng **chưa thu** vẫn được chốt T5 bình thường.
 
+**Chuỗi chỉ số (CSC):** Kỳ chưa chốt luôn lấy CSC = CSM kỳ **đã chốt gần nhất** trước đó. Khi chốt T4 = 160 → T5, T6 (chưa chốt) tự cập nhật CSC = 160; chốt T5 = 165 → T6 cập nhật CSC = 165. Mở bảng thu cũng tự sửa CSC lệch trong DB. Sửa hàng loạt: `npm run db:refresh-pending-old-readings`.
+
 ## Mẫu biên nhận in (PDF / Bluetooth)
 
 Trường trên bill: tên HTX, **BIÊN NHẬN THANH TOÁN**, `T5(Liên 2)`, Tên KH, Mã KH, Địa chỉ, NĐK/NCK, Hình thức TT, Nội dung, CS cũ/mới, SL truy thu, bảng SL(m³)|Đơn giá|Thành tiền (tiền trước thuế), Thuế GTGT, Tổng tiền, Bằng chữ, Đ/c, LH, Ngày, NV thu.

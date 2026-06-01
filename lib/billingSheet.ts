@@ -1,6 +1,7 @@
 import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import { prisma } from "./db";
 import { calculateUsage } from "./billing";
+import { resolveOldReadingForRow } from "./readings";
 import {
   calculateBillingAmounts,
   invoiceNeedsVatBackfill,
@@ -98,15 +99,12 @@ export async function loadBillingSheetRows(
     orderBy: [{ routeSortOrder: "asc" }, { householdCode: "asc" }],
   });
 
-  const missingOldReadingHouseholdIds = households
-    .filter((h) => h.readings[0]?.oldReading == null)
-    .map((h) => h.id);
-
+  const householdIds = households.map((h) => h.id);
   const priorReadingByHousehold = new Map<string, number>();
-  if (missingOldReadingHouseholdIds.length) {
+  if (householdIds.length) {
     const priorReadings = await prisma.meterReading.findMany({
       where: {
-        householdId: { in: missingOldReadingHouseholdIds },
+        householdId: { in: householdIds },
         status: ReadingStatus.CONFIRMED,
         confirmedValue: { not: null },
         period: {
@@ -128,21 +126,31 @@ export async function loadBillingSheetRows(
       ],
     });
 
-    for (const reading of priorReadings) {
-      if (!priorReadingByHousehold.has(reading.householdId) && reading.confirmedValue != null) {
-        priorReadingByHousehold.set(reading.householdId, reading.confirmedValue);
+    for (const r of priorReadings) {
+      if (!priorReadingByHousehold.has(r.householdId) && r.confirmedValue != null) {
+        priorReadingByHousehold.set(r.householdId, r.confirmedValue);
       }
     }
   }
+
+  const pendingOldReadingPatches: { id: string; oldReading: number }[] = [];
 
   const rows: BillingSheetRow[] = [];
   for (const h of households) {
     const reading = h.readings[0] ?? null;
     const invoice = h.invoices[0] ?? null;
-    const oldReading =
-      reading?.oldReading ??
+    const chainOldReading =
       priorReadingByHousehold.get(h.id) ??
       fallbackOldReadingFromMeterCode(h.meterCode);
+    const oldReading = resolveOldReadingForRow(reading, chainOldReading);
+
+    if (
+      reading &&
+      reading.status !== ReadingStatus.CONFIRMED &&
+      reading.oldReading !== oldReading
+    ) {
+      pendingOldReadingPatches.push({ id: reading.id, oldReading });
+    }
     const csm =
       reading?.status === ReadingStatus.CONFIRMED
         ? reading.confirmedValue
@@ -215,6 +223,18 @@ export async function loadBillingSheetRows(
       paymentMethod: invoice?.payment?.method ?? null,
     });
   }
+
+  if (pendingOldReadingPatches.length) {
+    await prisma.$transaction(
+      pendingOldReadingPatches.map((p) =>
+        prisma.meterReading.update({
+          where: { id: p.id },
+          data: { oldReading: p.oldReading },
+        })
+      )
+    );
+  }
+
   return rows;
 }
 
