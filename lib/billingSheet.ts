@@ -159,20 +159,20 @@ export async function loadBillingSheetRows(
       csm != null ? calculateUsage(csm, oldReading) : reading?.usageM3 ?? null;
     const unitPrice = unitPriceForHousehold(h);
     let amounts: ReturnType<typeof calculateBillingAmounts> | null = null;
-    if (usageM3 != null && usageM3 > 0) {
-      amounts = invoice?.subtotalAmount != null
-        ? resolveInvoiceAmounts(
-            {
-              usageM3: invoice.usageM3,
-              unitPrice: invoice.unitPrice,
-              subtotalAmount: invoice.subtotalAmount,
-              vatPercent: invoice.vatPercent,
-              vatAmount: invoice.vatAmount,
-              totalAmount: invoice.totalAmount,
-            },
-            vatPercent
-          )
-        : calculateBillingAmounts(usageM3, unitPrice, vatPercent);
+    if (invoice?.subtotalAmount != null) {
+      amounts = resolveInvoiceAmounts(
+        {
+          usageM3: invoice.usageM3,
+          unitPrice: invoice.unitPrice,
+          subtotalAmount: invoice.subtotalAmount,
+          vatPercent: invoice.vatPercent,
+          vatAmount: invoice.vatAmount,
+          totalAmount: invoice.totalAmount,
+        },
+        vatPercent
+      );
+    } else if (usageM3 != null && usageM3 > 0) {
+      amounts = calculateBillingAmounts(usageM3, unitPrice, vatPercent);
     } else if (usageM3 === 0) {
       amounts = { subtotal: 0, vatPercent, vatAmount: 0, totalAmount: 0 };
     }

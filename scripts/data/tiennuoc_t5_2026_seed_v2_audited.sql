@@ -5,9 +5,8 @@
 -- Chính sách an toàn:
 -- 1) Tạo/cập nhật danh mục tuyến, nhóm giá, hộ dân cho toàn bộ 1430 dòng.
 -- 2) Chỉ tạo/cập nhật meter_reading + invoice cho dòng hợp lệ: validation_flags = '' (1417 dòng).
--- 3) Không tự tạo payment và không đánh dấu PAID vì file gốc không có cột xác nhận Đã thu rõ ràng.
--- 4) invoice.vat_percent = 0 để giữ nguyên "Thành tiền" theo file gốc. Nếu hệ thống bắt buộc VAT 10%,
---    hãy điều chỉnh lại chính sách giá trước khi chạy phần invoice.
+-- 3) invoice: Giá = source_amount (file gốc), vat_percent = 0 — khi bật VAT 10% trên web, bảng thu tự tính GTGT khi hiển thị.
+-- 4) Sau import chạy: npm run db:mark-period-paid -- --year 2026 --month 5  (đánh dấu PAID, giữ nguyên số tiền).
 --
 -- Rà soát số liệu lần 2:
 -- - Bổ sung 1 hộ bị bỏ sót trong pack trước: CAM KHE dòng Excel 128 - ĐẶNG VĂN ÁNH.
@@ -1580,7 +1579,7 @@ SET old_reading = EXCLUDED.old_reading,
     submitted_at = EXCLUDED.submitted_at,
     confirmed_at = EXCLUDED.confirmed_at;
 
--- Hóa đơn: giữ nguyên thành tiền theo file gốc, VAT = 0.
+-- Hóa đơn: Giá (subtotal) = source_amount; GTGT 10%; Thành tiền = Giá + GTGT.
 INSERT INTO invoice (
     id, household_id, period_id, usage_m3, unit_price,
     subtotal_amount, vat_percent, vat_amount, total_amount,
