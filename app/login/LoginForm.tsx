@@ -91,8 +91,7 @@ export function LoginForm() {
           required
         />
         <p className="mt-1 text-xs text-[var(--muted)]">
-          Admin: <code className="text-[var(--foreground)]">admin</code> · Hộ dân: số điện thoại · MK mặc định{" "}
-          <code className="text-[var(--foreground)]">123456</code>
+          Admin: <code className="text-[var(--foreground)]">admin</code> · Hộ dân: số điện thoại đăng ký
         </p>
       </div>
       <div>

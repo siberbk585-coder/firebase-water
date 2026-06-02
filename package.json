@@ -30,6 +30,7 @@
     "firebase:copy-db": "node scripts/firebase-copy-db.mjs",
     "firebase:cloudsql-url": "node scripts/firebase-cloudsql-url.mjs",
     "firebase:provision-auth": "tsx scripts/firebase-provision-auth.mjs",
+    "db:set-password": "tsx scripts/set-user-password.ts",
     "firebase:migrate-subset": "node scripts/migrate-subset-to-tiennuoc.mjs",
     "firebase:seed-demo": "tsx scripts/seed-tiennuoc-demo.mjs",
     "firebase:seed-mock-50": "tsx scripts/seed-mock-50.ts",

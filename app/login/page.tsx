@@ -20,7 +20,7 @@ export default async function LoginPage() {
         </div>
         <LoginForm />
         <p className="mt-4 rounded-lg bg-[var(--card-muted)] p-3 text-xs leading-5 text-[var(--muted)]">
-          Demo: Quản trị admin / 123456 — Hộ dân 0912345678 / 123456
+          Đăng nhập bằng tài khoản admin hoặc số điện thoại hộ dân đã cấp
         </p>
       </div>
     </div>
