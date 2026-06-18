@@ -8,7 +8,7 @@ import type {
 } from "@/lib/types/enums";
 import type { AnomalyCode } from "./anomaly";
 
-export const appTitle = "Thu tiền nước";
+export const appTitle = "Trạm Toàn Thắng";
 
 /** Bật `true` để hiện mục menu Thu tiền (/admin/payments) trên header. */
 export const showPaymentsNav = false;
@@ -21,8 +21,13 @@ export const adminNav = [
     ? ([{ href: "/admin/payments", label: "Thu tiền" }] as const)
     : []),
   { href: "/admin/households", label: "Danh sách hộ" },
+  { href: "/admin/collectors", label: "Tài khoản thu hộ" },
   { href: "/admin/area-prices", label: "Giá & VAT" },
   { href: "/admin/audit-log", label: "Nhật ký" },
+] as const;
+
+export const collectorNav = [
+  { href: "/collector/billing-sheet", label: "Bảng thu nước" },
 ] as const;
 
 export const residentNav = [
@@ -73,11 +78,21 @@ export function anomalyLabel(code: AnomalyCode): string {
 }
 
 export function userRoleLabel(role: UserRole | string): string {
-  return role === "ADMIN" ? "Quản trị" : "Hộ dân";
+  if (role === "ADMIN") return "Quản trị";
+  if (role === "COLLECTOR") return "Người thu";
+  return "Hộ dân";
 }
 
 export function householdStatusLabel(status: HouseholdStatus | string): string {
-  return status === "ACTIVE" ? "Đang sử dụng" : "Ngừng";
+  return status === "ACTIVE" ? "Đang sử dụng" : "Ngưng sử dụng";
+}
+
+export function householdInactiveFromLabel(
+  year: number | null | undefined,
+  month: number | null | undefined
+): string | null {
+  if (year == null || month == null) return null;
+  return `Ngưng từ ${formatPeriod(month, year)}`;
 }
 
 export function periodStatusLabel(status: PeriodStatus | string): string {
@@ -99,7 +114,13 @@ export function auditActionLabel(action: string): string {
     XLSX_EXPORT: "Xuất Excel",
     XLSX_IMPORT: "Nhập Excel kỳ thu",
     SETTINGS_UPDATED: "Cập nhật cài đặt",
+    COLLECTOR_CREATED: "Tạo tài khoản thu hộ",
+    COLLECTOR_DEACTIVATED: "Đóng tài khoản thu hộ",
+    COLLECTOR_REACTIVATED: "Mở lại tài khoản thu hộ",
+    COLLECTOR_ROUTES_UPDATED: "Cập nhật khu vực thu hộ",
     HOUSEHOLD_CREATED: "Thêm hộ mới",
+    HOUSEHOLD_DEACTIVATED: "Ngưng sử dụng hộ",
+    HOUSEHOLD_REACTIVATED: "Kích hoạt lại hộ",
     HOUSEHOLD_DELETED: "Xóa hộ",
     HOUSEHOLD_PAYMENT_METHOD_UPDATED: "Đổi hình thức thu hộ",
   };

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { currentCalendarPeriod, getBillingPeriods } from "@/lib/billingSheet";
 import { enrollHouseholdInOpenPeriods } from "@/lib/billingPeriods";
 import { getOldReading, readingLastUpdatedAt } from "@/lib/readings";
+import { isHouseholdBillableInPeriod } from "@/lib/householdBillable";
 import { canResidentSubmitForPeriod } from "@/lib/settings";
 import { SubmitReadingClient } from "./SubmitReadingClient";
 import { formatPeriod, readingStatusLabel } from "@/lib/vi";
@@ -47,6 +48,13 @@ export default async function SubmitReadingPage() {
   const submitGate = currentPeriod
     ? await canResidentSubmitForPeriod(currentPeriod)
     : { allowed: false as const, reason: "Chưa có kỳ tính cước." };
+
+  const billableInCurrentPeriod =
+    currentPeriod != null &&
+    isHouseholdBillableInPeriod(household, currentPeriod.year, currentPeriod.month);
+  const inactiveBlockedReason = !billableInCurrentPeriod
+    ? "Hộ đã ngưng sử dụng — không thể gửi chỉ số kỳ này."
+    : undefined;
 
   return (
     <>
@@ -107,12 +115,15 @@ export default async function SubmitReadingPage() {
               : ""
           }
           canSubmit={
+            billableInCurrentPeriod &&
             submitGate.allowed &&
             (!currentReading ||
               currentReading.status === ReadingStatus.REJECTED ||
               currentReading.status === ReadingStatus.PENDING)
           }
-          submitBlockedReason={!submitGate.allowed ? submitGate.reason : undefined}
+          submitBlockedReason={
+            inactiveBlockedReason ?? (!submitGate.allowed ? submitGate.reason : undefined)
+          }
         />
       ) : (
         <p>Chưa có kỳ tính cước.</p>

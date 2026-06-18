@@ -75,16 +75,15 @@ Tài liệu vận hành web: [QUY_TRINH_VAN_HANH.md](./QUY_TRINH_VAN_HANH.md).
 
 ---
 
-## 3. Môi trường & tài khoản test
+## 3. Môi trường & tài khoản
 
 | Mục | Giá trị |
 |-----|---------|
 | Base URL API | `https://tiennuoc.web.app` |
-| Admin demo | `admin` / `123456` |
-| Hộ mock | `0931000001` … `0931000050` / `123456` |
+| Tài khoản | Do quản trị HTX cấp |
 | Timezone | `Asia/Ho_Chi_Minh` |
 
-**Lưu ý đăng nhập:** Trường `phone` gửi lên API là `admin` hoặc SĐT thuần (vd. `0931000001`), **không** thêm domain email.
+**Lưu ý đăng nhập:** Trường `phone` gửi lên API là SĐT thuần hoặc `admin`, **không** thêm domain email.
 
 ---
 
@@ -97,8 +96,8 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "phone": "admin",
-  "password": "123456"
+  "phone": "<số-điện-thoại-hoặc-admin>",
+  "password": "<mật-khẩu>"
 }
 ```
 
@@ -502,7 +501,7 @@ lib/
 
 ### 10.1 Bắt buộc
 
-- [ ] Cài APK debug, đăng nhập `admin`/`123456` thành công trên mạng thật (production API).
+- [ ] Cài APK release, đăng nhập tài khoản nhân viên thật trên mạng production.
 - [ ] Chọn được kỳ OPEN và tuyến; thấy danh sách hộ (sau khi có API mục 5.2).
 - [ ] Chốt CSM cho 1 hộ → trạng thái CONFIRMED; tiền hiển thị đúng công thức.
 - [ ] In/xem PDF biên nhận 1 hộ; nội dung khớp web (mã hộ, CSC/CSM, tổng tiền).
@@ -540,7 +539,7 @@ lib/
 
 ### Bước 4 — Test với production
 
-- Dùng tài khoản demo; kỳ Tháng 5/2026 trên production thường có data mock.
+- Dùng tài khoản do quản trị cấp; đối chiếu với web billing-sheet.
 - Đối chiếu với https://tiennuoc.web.app/admin/billing-sheet.
 
 ### Bước 5 — Giao hàng
@@ -606,7 +605,7 @@ Nhiệm vụ:
    implement PR vào repo web theo contract trong brief, rồi merge/deploy.
 3. Build MVP Android: login ADMIN, chọn kỳ/tuyến, danh sách hộ, chốt CSM,
    in PDF biên nhận, xác nhận thu — gọi API production https://tiennuoc.web.app.
-4. Test với admin/123456; đối chiếu web billing-sheet.
+4. Test với tài khoản nhân viên thật; đối chiếu web billing-sheet.
 5. Giao README build APK debug.
 
 Không dùng Capacitor. Không copy code từ thư mục mobile/ đã xóa.

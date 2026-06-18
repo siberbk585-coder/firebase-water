@@ -5,7 +5,7 @@
 -- Chính sách an toàn:
 -- 1) Tạo/cập nhật danh mục tuyến, nhóm giá, hộ dân cho toàn bộ 1430 dòng.
 -- 2) Chỉ tạo/cập nhật meter_reading + invoice cho dòng hợp lệ: validation_flags = '' (1417 dòng).
--- 3) invoice: Giá = source_amount (file gốc), vat_percent = 0 — khi bật VAT 10% trên web, bảng thu tự tính GTGT khi hiển thị.
+-- 3) invoice: Thành tiền = source_amount (file gốc, đã gồm VAT). Sau import chạy: npm run db:apply-vat-inclusive (tách Giá + GTGT 5%, không đổi thành tiền).
 -- 4) Sau import chạy: npm run db:mark-period-paid -- --year 2026 --month 5  (đánh dấu PAID, giữ nguyên số tiền).
 --
 -- Rà soát số liệu lần 2:
@@ -1579,7 +1579,7 @@ SET old_reading = EXCLUDED.old_reading,
     submitted_at = EXCLUDED.submitted_at,
     confirmed_at = EXCLUDED.confirmed_at;
 
--- Hóa đơn: Giá (subtotal) = source_amount; GTGT 10%; Thành tiền = Giá + GTGT.
+-- Hóa đơn: Thành tiền = source_amount (đã gồm VAT); tạm vat=0 — chạy db:apply-vat-inclusive để tách 5%.
 INSERT INTO invoice (
     id, household_id, period_id, usage_m3, unit_price,
     subtotal_amount, vat_percent, vat_amount, total_amount,

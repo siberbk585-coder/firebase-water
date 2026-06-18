@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/auth";
-import { UserRole } from "@/lib/types/enums";
+import {
+  authorizeHouseholdAction,
+  requireStaffSession,
+  staffUnauthorized,
+} from "@/lib/staffAuth";
 import {
   ensureInvoiceForHouseholdPeriod,
   exportInvoicePdfLocal,
@@ -19,10 +22,8 @@ const schema = z.object({
 /** Xuất PDF gộp nhiều hộ (đã chốt CSM) — một file để in hàng loạt. */
 export async function POST(request: Request) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== UserRole.ADMIN) {
-      return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
-    }
+    const session = await requireStaffSession();
+    if (!session) return staffUnauthorized();
 
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) {
@@ -35,6 +36,11 @@ export async function POST(request: Request) {
 
     for (const householdId of householdIds) {
       try {
+        const denied = await authorizeHouseholdAction(session, householdId);
+        if (denied) {
+          errors.push({ householdId, message: "Không có quyền trên hộ này" });
+          continue;
+        }
         const invoiceId = await ensureInvoiceForHouseholdPeriod(householdId, periodId);
         const { buffer } = await exportInvoicePdfLocal(invoiceId);
         buffers.push(buffer);

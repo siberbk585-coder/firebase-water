@@ -4,6 +4,7 @@ import { runOcrOnImage, needsManualEntry } from "@/lib/ocr";
 import { saveBuffer } from "@/lib/storage";
 import { prisma } from "@/lib/db";
 import { getOldReading } from "@/lib/readings";
+import { isHouseholdBillableInPeriod } from "@/lib/householdBillable";
 import { ReadingStatus } from "@/lib/types/enums";;
 import { randomUUID } from "crypto";
 
@@ -25,11 +26,30 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const ext = file.name.split(".").pop() || "jpg";
 
-  const [ocr, oldReading, imagePath] = await Promise.all([
+  const [household, period, ocr, oldReading, imagePath] = await Promise.all([
+    prisma.household.findUniqueOrThrow({
+      where: { id: session.householdId },
+      select: {
+        status: true,
+        inactiveFromYear: true,
+        inactiveFromMonth: true,
+      },
+    }),
+    prisma.billingPeriod.findUniqueOrThrow({
+      where: { id: periodId },
+      select: { year: true, month: true },
+    }),
     runOcrOnImage(buffer),
     getOldReading(session.householdId, periodId),
     saveBuffer("readings", `${randomUUID()}.${ext}`, buffer),
   ]);
+
+  if (!isHouseholdBillableInPeriod(household, period.year, period.month)) {
+    return NextResponse.json(
+      { error: "Hộ đã ngưng sử dụng — không thể gửi chỉ số kỳ này." },
+      { status: 403 }
+    );
+  }
 
   const existing = await prisma.meterReading.findUnique({
     where: {

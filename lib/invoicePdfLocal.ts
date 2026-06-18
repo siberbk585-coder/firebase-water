@@ -63,9 +63,14 @@ export async function exportInvoicePdfLocal(invoiceId: string): Promise<{
     invoice.unitPrice ?? unitPriceForHousehold(invoice.household);
   const usageM3 = invoice.usageM3 ?? reading.usageM3;
   const vatPercent = await getVatPercent();
+  const invoiceLocked =
+    invoice.status === InvoiceStatus.PAID ||
+    invoice.status === InvoiceStatus.CANCELLED;
   const amounts =
     invoice.subtotalAmount != null
-      ? resolveInvoiceAmounts(invoice, vatPercent)
+      ? invoiceLocked
+        ? resolveInvoiceAmounts(invoice)
+        : resolveInvoiceAmounts(invoice, vatPercent)
       : calculateBillingAmounts(usageM3, unitPrice, vatPercent);
   const periodLabel = formatPeriod(invoice.period.month, invoice.period.year);
   const invoiceCode = `HD-${invoice.period.year}${String(invoice.period.month).padStart(2, "0")}-${invoice.household.householdCode}`;

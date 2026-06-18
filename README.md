@@ -424,16 +424,11 @@ cp .env.example .env && npm install && npm run db:migrate && npm run db:seed && 
 
 ---
 
-## Tài khoản demo
+## Tài khoản (local dev)
 
-Sau khi chạy `npm run db:seed`:
+Sau khi chạy `npm run db:seed` trên **Postgres local**, tài khoản demo được in ra terminal (chỉ dùng dev, không dùng production).
 
-| Vai trò | Tài khoản | Mật khẩu |
-|---------|-----------|----------|
-| Admin (tổ trưởng) | `admin` | `123456` |
-| Hộ dân | `0912345678` | `123456` |
-
-Hộ dân demo gắn với đồng hồ `DH00001`.
+Production: tài khoản do quản trị HTX cấp qua web admin.
 
 ---
 
@@ -457,10 +452,13 @@ Hộ dân demo gắn với đồng hồ `DH00001`.
 
 ## Xác thực (Firebase Auth + phân quyền)
 
-| Vai trò | Tài khoản demo | Quyền |
-|---------|----------------|-------|
-| **ADMIN** | `admin` / `123456` | Toàn bộ `/admin/*` |
-| **RESIDENT** | `0912345678` / `123456` | `/resident/*` |
+| Vai trò | Quyền |
+|---------|-------|
+| **ADMIN** | Toàn bộ `/admin/*` |
+| **COLLECTOR** | Thu tuyến được gán |
+| **RESIDENT** | `/resident/*` |
+
+Tài khoản production do quản trị HTX tạo — không dùng credential cố định trên môi trường thật.
 
 - Đăng nhập qua **Firebase Authentication** (email/password). Số điện thoại được map thành `sdt@accounts.thu-ien-nuoc.local`.
 - **Phân quyền** lưu trong Postgres (`User.role`) và đồng bộ **custom claim** Firebase (`ADMIN` / `RESIDENT`).
@@ -469,8 +467,8 @@ Hộ dân demo gắn với đồng hồ `DH00001`.
 ```bash
 # Bật Email/Password (đã deploy): firebase deploy --only auth
 
-# Đồng bộ user DB → Firebase (sau migrate)
-npm run firebase:provision-auth -- --account admin --password 123456
+# Đồng bộ user DB → Firebase (sau migrate, chỉ local/dev)
+npm run firebase:provision-auth -- --account <phone> --password <mật-khẩu>
 npm run firebase:provision-auth              # tất cả user
 npm run firebase:provision-auth -- --role ADMIN
 ```

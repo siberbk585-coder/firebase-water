@@ -54,7 +54,7 @@ erDiagram
 
 **Quy tắc CSC:** CSC kỳ N thường = CSM kỳ N−1 đã chốt (chuỗi chỉ số).
 
-**Tiền:** `subtotal_amount = round(usage_m3 × unit_price)`; `vat_amount = round(subtotal × vat_percent / 100)`; `total_amount = subtotal + vat_amount` (VAT mặc định 10%, lấy từ `system_settings`).
+**Tiền:** Đơn giá **đã gồm VAT** (mặc định 5% trong `system_settings`). `total_amount = round(usage_m3 × unit_price)`; tách `subtotal_amount = round(total / (1 + vat%/100))`, `vat_amount = total − subtotal` (thành tiền không đổi).
 
 ---
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { SessionUser } from "@/lib/auth";
 import { appTitle, userRoleLabel } from "@/lib/vi";
 import { AppMobileNav, AppNav } from "@/components/AppNav";
+import { BrandLogo } from "@/components/BrandLogo";
 import { LogoutButton } from "@/components/LogoutButton";
 
 const ADMIN_MOBILE_NAV = new Set([
@@ -34,9 +35,11 @@ export function AppShell({
               href="/"
               className="group flex shrink-0 items-center gap-2.5 sm:gap-3"
             >
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--border)] bg-white shadow-sm">
-                <span className="h-2.5 w-2.5 rounded-full bg-[var(--primary)]" />
-              </span>
+              <BrandLogo
+                size={32}
+                iconOnly
+                className="shrink-0 rounded-xl border border-[var(--border)] bg-white p-1 shadow-sm"
+              />
               <span className="hidden leading-tight sm:block">
                 <span className="block text-sm font-semibold tracking-tight text-[var(--foreground)]">
                   {appTitle}

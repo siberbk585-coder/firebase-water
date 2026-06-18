@@ -5,15 +5,21 @@ import { dcFindUserByFirebaseUid, dcLinkFirebaseUid } from "@/lib/data/dataconne
 import { UserRole } from "@/lib/types/enums";
 import { getAdminAuth } from "./firebase/admin";
 
-export type FirebaseAuthRole = "ADMIN" | "RESIDENT";
+export type FirebaseAuthRole = "ADMIN" | "RESIDENT" | "COLLECTOR";
+
+function toFirebaseClaimRole(role: UserRole): FirebaseAuthRole {
+  if (role === UserRole.ADMIN) return "ADMIN";
+  if (role === UserRole.COLLECTOR) return "COLLECTOR";
+  return "RESIDENT";
+}
 
 export async function syncFirebaseRoleClaim(
   firebaseUid: string,
   role: UserRole
 ): Promise<void> {
-  const claimRole: FirebaseAuthRole =
-    role === UserRole.ADMIN ? "ADMIN" : "RESIDENT";
-  await getAdminAuth().setCustomUserClaims(firebaseUid, { role: claimRole });
+  await getAdminAuth().setCustomUserClaims(firebaseUid, {
+    role: toFirebaseClaimRole(role),
+  });
 }
 
 /** Xác thực ID token Firebase và ánh xạ sang User trong Postgres (phân quyền). */
@@ -45,8 +51,13 @@ export async function resolveSessionFromIdToken(
 
   if (!user && decoded.email) {
     const account = authEmailToAccount(decoded.email);
-    user = await prisma.user.findUnique({
-      where: { phone: account },
+    user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { phone: account },
+          { username: { equals: account, mode: "insensitive" } },
+        ],
+      },
       include: { household: true },
     });
     if (user) {
@@ -64,9 +75,11 @@ export async function resolveSessionFromIdToken(
   }
 
   if (!user) return null;
+  if (!user.isActive) return null;
 
   const claimRole = decoded.role as FirebaseAuthRole | undefined;
-  if (claimRole && claimRole !== user.role) {
+  const expectedClaim = toFirebaseClaimRole(user.role);
+  if (claimRole && claimRole !== expectedClaim) {
     return null;
   }
 

@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { InvoiceStatus, UserRole } from "@/lib/types/enums";
+import { InvoiceStatus } from "@/lib/types/enums";
+import {
+  authorizeInvoiceAction,
+  revalidateStaffBillingPaths,
+  requireStaffSession,
+  staffUnauthorized,
+} from "@/lib/staffAuth";
 import { PaymentMethod } from "@prisma/client";
 import { logAudit } from "@/lib/audit";
 import { auditExtraFromRequest } from "@/lib/auditClient";
@@ -16,15 +20,16 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session || session.role !== UserRole.ADMIN) {
-    return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
-  }
+  const session = await requireStaffSession();
+  if (!session) return staffUnauthorized();
 
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Dữ liệu không hợp lệ" }, { status: 400 });
   }
+
+  const denied = await authorizeInvoiceAction(session, parsed.data.invoiceId);
+  if (denied) return denied;
 
   const invoice = await prisma.invoice.findUniqueOrThrow({
     where: { id: parsed.data.invoiceId },
@@ -71,9 +76,7 @@ export async function POST(request: Request) {
     }),
   });
 
-  revalidatePath("/admin/payments");
-  revalidatePath("/admin/billing-sheet");
-  revalidatePath("/admin/dashboard");
+  revalidateStaffBillingPaths();
 
   return NextResponse.json({ ok: true });
 }

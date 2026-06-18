@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
-import { UserRole } from "@/lib/types/enums";;
 import { z } from "zod";
-import { getSession } from "@/lib/auth";
+import {
+  authorizeHouseholdAction,
+  isAdminOnlyRole,
+  revalidateStaffBillingPaths,
+  requireStaffSession,
+  staffUnauthorized,
+} from "@/lib/staffAuth";
 import { auditExtraFromRequest } from "@/lib/auditClient";
 import { adminUpsertReading } from "@/lib/readings";
 import { calculateUsage } from "@/lib/billing";
@@ -16,10 +20,8 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session || session.role !== UserRole.ADMIN) {
-    return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
-  }
+  const session = await requireStaffSession();
+  if (!session) return staffUnauthorized();
 
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
@@ -27,6 +29,8 @@ export async function POST(request: Request) {
   }
 
   const { householdId, periodId, confirmedValue } = parsed.data;
+  const denied = await authorizeHouseholdAction(session, householdId);
+  if (denied) return denied;
 
   const household = await prisma.household.findUnique({
     where: { id: householdId },
@@ -36,16 +40,20 @@ export async function POST(request: Request) {
   }
 
   try {
+    const allowPaidEdit = isAdminOnlyRole(session);
     const reading = await adminUpsertReading({
       householdId,
       periodId,
       confirmedValue,
       actorId: session.id,
       auditExtra: auditExtraFromRequest(request),
+      allowPaidEdit,
     });
     const usageM3 = reading.usageM3 ?? calculateUsage(confirmedValue, reading.oldReading);
-    const invoice = await syncInvoiceForConfirmedReading(householdId, periodId);
-    revalidatePath("/admin/billing-sheet");
+    const invoice = await syncInvoiceForConfirmedReading(householdId, periodId, {
+      allowPaidUpdate: allowPaidEdit,
+    });
+    revalidateStaffBillingPaths();
     return NextResponse.json({
       ok: true,
       reading: {

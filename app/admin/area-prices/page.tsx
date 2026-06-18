@@ -2,7 +2,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/billing";
 import { getSystemSettings } from "@/lib/settings";
-import { calculateBillingAmounts } from "@/lib/vat";
+import {
+  calculateBillingAmounts,
+  unitPriceExclusiveFromInclusive,
+} from "@/lib/vat";
 import { createRouteWithPrice, saveRoutePrices, saveVatSettings } from "./actions";
 
 export default async function AreaPricesPage() {
@@ -21,6 +24,7 @@ export default async function AreaPricesPage() {
 
   const vatPercent = settings.vatPercent;
   const vatSample = calculateBillingAmounts(10, defaultPrice, vatPercent);
+  const unitOnReceipt = unitPriceExclusiveFromInclusive(defaultPrice, vatPercent);
 
   return (
     <>
@@ -39,8 +43,8 @@ export default async function AreaPricesPage() {
       <form action={saveVatSettings} className="card mb-6">
         <h2 className="mb-2 font-semibold">Thuế GTGT (VAT)</h2>
         <p className="mb-3 text-sm text-[var(--muted)]">
-          Giá = m³ × đơn giá. Thành tiền = Giá + Thuế GTGT. Hóa đơn đã phát hành hoặc đã thu giữ
-          nguyên số đã lưu.
+          Đơn giá đã gồm VAT. Thành tiền = m³ × đơn giá; trên hóa đơn tách Giá (trước thuế) + Thuế
+          GTGT. Hóa đơn đã thu giữ nguyên thành tiền đã ghi.
         </p>
         <div className="flex flex-wrap items-end gap-3">
           <div>
@@ -64,16 +68,17 @@ export default async function AreaPricesPage() {
           </button>
         </div>
         <p className="mt-3 text-xs text-[var(--muted)]">
-          Ví dụ 10 m³ × {formatCurrency(defaultPrice)}/m³: Giá{" "}
-          <strong>{formatCurrency(vatSample.subtotal)}</strong>
+          Nhập <strong>{formatCurrency(defaultPrice)}</strong>/m³ (gồm VAT) — trên hóa đơn in đơn giá{" "}
+          <strong>{formatCurrency(unitOnReceipt)}</strong>/m³ (trước thuế). Ví dụ 10 m³: Thành tiền{" "}
+          <strong>{formatCurrency(vatSample.totalAmount)}</strong>
           {vatSample.vatAmount > 0 && (
             <>
               {" "}
-              · GTGT {vatSample.vatPercent}%: <strong>{formatCurrency(vatSample.vatAmount)}</strong>
+              (dòng SL×đơn giá {formatCurrency(vatSample.subtotal)}
+              {" "}
+              + GTGT {vatSample.vatPercent}% {formatCurrency(vatSample.vatAmount)})
             </>
           )}
-          {" "}
-          · Thành tiền: <strong>{formatCurrency(vatSample.totalAmount)}</strong>
         </p>
       </form>
 
@@ -83,7 +88,7 @@ export default async function AreaPricesPage() {
             <tr>
               <th>Khu vực</th>
               <th className="w-28 text-right">Số hộ</th>
-              <th className="w-40">Giá (đ/m³)</th>
+              <th className="w-44">Giá (đ/m³, gồm VAT)</th>
             </tr>
           </thead>
           <tbody>

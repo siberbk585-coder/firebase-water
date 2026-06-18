@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { UserRole } from "@/lib/types/enums";;
+import {
+  authorizeInvoiceAction,
+  requireStaffSession,
+  staffUnauthorized,
+} from "@/lib/staffAuth";
 import { exportInvoicePdfLocal } from "@/lib/invoicePdfLocal";
 import { logAudit } from "@/lib/audit";
 import { auditExtraFromRequest } from "@/lib/auditClient";
@@ -15,12 +18,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== UserRole.ADMIN) {
-      return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
-    }
+    const session = await requireStaffSession();
+    if (!session) return staffUnauthorized();
 
     const { id } = await params;
+    const denied = await authorizeInvoiceAction(session, id);
+    if (denied) return denied;
     const { buffer, meterCode } = await exportInvoicePdfLocal(id);
 
     try {

@@ -9,11 +9,13 @@ export function BillingPeriodSelect({
   activePeriodId,
   routeId,
   isSummary,
+  basePath = "/admin/billing-sheet",
 }: {
   periods: Period[];
   activePeriodId: string;
   routeId?: string;
   isSummary?: boolean;
+  basePath?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,7 +32,7 @@ export function BillingPeriodSelect({
     } else {
       params.set("route", "all");
     }
-    router.push(`/admin/billing-sheet?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   return (

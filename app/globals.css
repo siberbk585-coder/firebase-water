@@ -139,6 +139,96 @@ a {
   @apply mb-1 block text-sm font-semibold text-[var(--foreground)];
 }
 
+.login-card {
+  border-radius: 1.25rem;
+  border: 1px solid rgb(255 255 255 / 0.85);
+  background: rgb(255 255 255 / 0.92);
+  box-shadow:
+    0 24px 60px rgb(33 105 149 / 0.1),
+    0 4px 16px rgb(57 72 80 / 0.06);
+  backdrop-filter: blur(14px);
+  padding: 1.75rem;
+}
+
+@media (min-width: 640px) {
+  .login-card {
+    padding: 2rem 2.25rem;
+  }
+}
+
+.login-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-field-icon {
+  position: absolute;
+  left: 0.9rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.login-input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--card-muted);
+  padding: 0.72rem 0.9rem 0.72rem 2.65rem;
+  font-size: 0.9375rem;
+  color: var(--foreground);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.login-input::placeholder {
+  color: #94a3b8;
+}
+
+.login-input:focus {
+  border-color: var(--primary);
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(20 184 166 / 0.14);
+}
+
+.login-input-with-action {
+  padding-right: 2.75rem;
+}
+
+.login-field-action {
+  position: absolute;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.login-field-action:hover {
+  color: var(--foreground);
+  background: rgb(0 0 0 / 0.04);
+}
+
+.login-submit {
+  min-height: 3rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .badge {
   @apply inline-flex rounded-full px-2 py-0.5 text-xs font-semibold;
 }

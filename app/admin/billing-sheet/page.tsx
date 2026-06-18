@@ -18,6 +18,7 @@ import { BillingPeriodSelect } from "@/components/BillingPeriodSelect";
 import { BillingRouteSelect } from "@/components/BillingRouteSelect";
 import { BillingExcelPanel } from "@/components/BillingExcelPanel";
 import { BillingPrintPanel } from "@/components/BillingPrintPanel";
+import { BillingSheetSearchControl } from "@/components/BillingSheetSearchControl";
 import { BillingPrintSelectionProvider } from "@/components/billing-print-selection";
 import { formatPeriod } from "@/lib/vi";
 import { getVatPercent } from "@/lib/vatServer";
@@ -89,24 +90,9 @@ export default async function BillingSheetPage({
       );
   const summaries = isSummary ? await loadRouteSummaries(activePeriod.id) : [];
 
-  const query = searchQuery?.trim().toLowerCase() ?? "";
-  const filteredRows = query
-    ? rows.filter((r) => {
-        const hay = [
-          r.householdCode,
-          r.meterCode,
-          r.residentName,
-          r.contactPhone ?? "",
-          r.routeName ?? "",
-        ]
-          .join(" ")
-          .toLowerCase();
-        return hay.includes(query);
-      })
-    : rows;
-
   const pendingCount = countBillingSheetStatusFilter(rows, "pending");
   const confirmedCount = countBillingSheetStatusFilter(rows, "confirmed");
+  const unpaidCount = countBillingSheetStatusFilter(rows, "unpaid");
   const paidCount = countBillingSheetStatusFilter(rows, "paid");
   const routeQuery = isAll ? "all" : activeRoute?.id ?? "all";
 
@@ -120,15 +106,16 @@ export default async function BillingSheetPage({
     } else if (statusFilter !== "all") {
       p.set("status", statusFilter);
     }
-    if (extra?.q !== "" && searchQuery?.trim()) p.set("q", searchQuery.trim());
+    const qTrim = searchQuery?.trim();
+    if (qTrim) p.set("q", qTrim);
     return `/admin/billing-sheet?${p.toString()}`;
   }
 
-  const clearSearchHref = billingHref({ q: "" });
   const statusTabs: { key: BillingSheetStatusFilter; label: string }[] = [
     { key: "all", label: "Tất cả" },
     { key: "pending", label: pendingCount ? `Chờ chốt (${pendingCount})` : "Chờ chốt" },
     { key: "confirmed", label: confirmedCount ? `Đã chốt (${confirmedCount})` : "Đã chốt" },
+    { key: "unpaid", label: unpaidCount ? `Chưa thu (${unpaidCount})` : "Chưa thu" },
     { key: "paid", label: paidCount ? `Đã thu (${paidCount})` : "Đã thu" },
   ];
 
@@ -160,16 +147,11 @@ export default async function BillingSheetPage({
               : activeRoute
                 ? ` — ${activeRoute.name}`
                 : ""}
-          {!isSummary && (query || statusFilter !== "all") && (
+          {!isSummary && statusFilter !== "all" && (
             <span>
               {" "}
               · hiển thị{" "}
-              <strong>
-                {countBillingSheetStatusFilter(
-                  query ? filteredRows : rows,
-                  statusFilter
-                )}
-              </strong>
+              <strong>{countBillingSheetStatusFilter(rows, statusFilter)}</strong>
               /{rows.length} hộ
             </span>
           )}
@@ -198,46 +180,27 @@ export default async function BillingSheetPage({
               />
             </Suspense>
             {!isSummary && (
-              <form
-                method="get"
-                className="billing-search-control flex items-end gap-1 max-md:grid max-md:w-full max-md:grid-cols-[minmax(0,1fr)_auto] max-md:items-stretch max-md:gap-2"
-              >
-                <input type="hidden" name="period" value={activePeriod.id} />
-                <input type="hidden" name="route" value={routeQuery} />
-                {statusFilter !== "all" && (
-                  <input type="hidden" name="status" value={statusFilter} />
-                )}
-                <input
-                  name="q"
-                  defaultValue={searchQuery ?? ""}
-                  placeholder="Tìm MKH, đồng hồ, tên…"
-                  className="input billing-search-input py-1.5 text-sm max-md:w-full"
-                  aria-label="Tìm mã hộ, đồng hồ, tên"
-                />
-                <button type="submit" className="btn btn-secondary py-1.5 text-xs">
-                  Tìm
-                </button>
-                {query && (
-                  <Link
-                    href={clearSearchHref}
-                    className="btn btn-secondary px-2 py-1.5 text-xs"
-                    title="Xóa lọc"
-                  >
-                    ×
-                  </Link>
-                )}
-              </form>
+              <BillingSheetSearchControl
+                key={searchQuery ?? ""}
+                initialQuery={searchQuery ?? ""}
+              />
             )}
           </div>
           <div className="flex flex-wrap items-start gap-2">
             {!isSummary && (
               <div className="hidden md:block">
                 <BillingPrintPanel
+                  key={`desktop-print-${searchQuery ?? ""}`}
                   periodId={activePeriod.id}
-                  rows={filteredRows.map((r) => ({
+                  initialSearchQuery={searchQuery ?? ""}
+                  rows={rows.map((r) => ({
                     householdId: r.householdId,
                     householdCode: r.householdCode,
+                    meterCode: r.meterCode,
                     residentName: r.residentName,
+                    address: r.address,
+                    contactPhone: r.contactPhone,
+                    routeName: r.routeName,
                     status: r.status,
                   }))}
                 />
@@ -276,12 +239,14 @@ export default async function BillingSheetPage({
         <BillingSheetSummary summaries={summaries} periodLabel={periodLabel} />
       ) : activeRoute || isAll ? (
         <BillingSheetGrid
-          key={`${activePeriod.id}-${routeQuery}-${statusFilter}-${query}`}
+          key={`${activePeriod.id}-${routeQuery}-${statusFilter}`}
           periodId={activePeriod.id}
-          rows={filteredRows}
+          rows={rows}
           statusFilter={statusFilter}
+          initialSearchQuery={searchQuery ?? ""}
           vatPercent={vatPercent}
           showRoute={isAll}
+          allowPaidEdit
         />
         ) : (
           <p className="text-[var(--muted)]">
@@ -295,11 +260,17 @@ export default async function BillingSheetPage({
         <div className="mt-4 space-y-2 md:hidden">
           {!isSummary && (
             <BillingPrintPanel
+              key={`mobile-print-${searchQuery ?? ""}`}
               periodId={activePeriod.id}
-              rows={filteredRows.map((r) => ({
+              initialSearchQuery={searchQuery ?? ""}
+              rows={rows.map((r) => ({
                 householdId: r.householdId,
                 householdCode: r.householdCode,
+                meterCode: r.meterCode,
                 residentName: r.residentName,
+                address: r.address,
+                contactPhone: r.contactPhone,
+                routeName: r.routeName,
                 status: r.status,
               }))}
             />

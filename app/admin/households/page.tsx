@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { latestReading, readingCounts } from "@/lib/household";
-import { formatPeriod, householdStatusLabel, readingStatusLabel } from "@/lib/vi";
+import {
+  formatPeriod,
+  householdInactiveFromLabel,
+  householdStatusLabel,
+  readingStatusLabel,
+} from "@/lib/vi";
 import { AddHouseholdModal } from "@/components/AddHouseholdModal";
 
 export default async function AdminHouseholdsPage({
@@ -53,9 +58,6 @@ export default async function AdminHouseholdsPage({
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Quản lý hộ dân</h1>
-          <p className="text-sm text-[var(--muted)]">
-            Trung tâm theo hộ — mỗi hộ một mã, một đồng hồ, lịch sử chỉ số trong chi tiết.
-          </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end md:w-auto">
           <AddHouseholdModal routes={routes} />
@@ -100,14 +102,21 @@ export default async function AdminHouseholdsPage({
                   <h2 className="mt-1 truncate text-sm font-semibold">{h.residentName}</h2>
                   <p className="text-xs text-[var(--muted)]">{h.address}</p>
                 </div>
-                <span
-                  className={[
-                    "badge shrink-0",
-                    h.status === "ACTIVE" ? "badge-success" : "badge-danger",
-                  ].join(" ")}
-                >
-                  {householdStatusLabel(h.status)}
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span
+                    className={[
+                      "badge",
+                      h.status === "ACTIVE" ? "badge-success" : "bg-amber-50 text-amber-900",
+                    ].join(" ")}
+                  >
+                    {householdStatusLabel(h.status)}
+                  </span>
+                  {householdInactiveFromLabel(h.inactiveFromYear, h.inactiveFromMonth) && (
+                    <span className="text-[10px] font-medium text-amber-800">
+                      {householdInactiveFromLabel(h.inactiveFromYear, h.inactiveFromMonth)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="mobile-meta-grid">
@@ -207,7 +216,14 @@ export default async function AdminHouseholdsPage({
                       </div>
                     )}
                   </td>
-                  <td>{householdStatusLabel(h.status)}</td>
+                  <td>
+                    <div>{householdStatusLabel(h.status)}</div>
+                    {householdInactiveFromLabel(h.inactiveFromYear, h.inactiveFromMonth) && (
+                      <div className="text-xs text-amber-800">
+                        {householdInactiveFromLabel(h.inactiveFromYear, h.inactiveFromMonth)}
+                      </div>
+                    )}
+                  </td>
                   <td>
                     <Link
                       href={`/admin/households/${h.id}`}

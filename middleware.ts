@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 const PUBLIC_PREFIXES = [
   "/login",
+  "/privacy",
   "/api/auth/login",
   "/api/auth/session",
   "/api/uploads/", // n8n / MCP upload ảnh (API key trong route)
@@ -14,6 +15,7 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
+    pathname.startsWith("/api/") ||
     PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p))
   ) {
     return NextResponse.next();

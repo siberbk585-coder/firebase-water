@@ -16,6 +16,7 @@ export type SessionUser = {
   name: string;
   role: UserRole;
   householdId?: string;
+  username?: string | null;
 };
 
 function encodeSession(payload: SessionUser): string {
@@ -58,24 +59,43 @@ export function toSessionUser(user: {
   phone: string;
   name: string;
   role: UserRole;
+  username?: string | null;
+  isActive?: boolean;
   household?: { id: string } | null;
-}): SessionUser {
+}): SessionUser | null {
+  if (user.isActive === false) return null;
   return {
     id: user.id,
     phone: user.phone,
     name: user.name,
     role: user.role,
     householdId: user.household?.id,
+    username: user.username,
   };
+}
+
+/** Phone nội bộ cho tài khoản collector (username là định danh đăng nhập). */
+export function collectorInternalPhone(username: string): string {
+  return `collector:${username.trim().toLowerCase()}`;
+}
+
+async function findUserByAccount(account: string) {
+  const trimmed = account.trim();
+  const lower = trimmed.toLowerCase();
+  return prisma.user.findFirst({
+    where: {
+      OR: [
+        { phone: trimmed },
+        { username: { equals: lower, mode: "insensitive" } },
+      ],
+    },
+    include: { household: true },
+  });
 }
 
 /** Đăng nhập legacy (bcrypt) — dùng khi chưa có tài khoản Firebase. */
 export async function login(phone: string, password: string): Promise<SessionUser | null> {
-  const account = phone.trim();
-  const user = await prisma.user.findUnique({
-    where: { phone: account },
-    include: { household: true },
-  });
+  const user = await findUserByAccount(phone);
   if (!user?.passwordHash) return null;
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) return null;

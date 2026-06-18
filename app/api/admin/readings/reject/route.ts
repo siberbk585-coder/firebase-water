@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
-import { UserRole } from "@/lib/types/enums";;
 import { z } from "zod";
-import { getSession } from "@/lib/auth";
+import {
+  authorizeHouseholdAction,
+  revalidateStaffBillingPaths,
+  requireStaffSession,
+  staffUnauthorized,
+} from "@/lib/staffAuth";
 import { rejectReading } from "@/lib/readings";
+import { prisma } from "@/lib/db";
 
 const schema = z.object({
   readingId: z.string(),
@@ -11,15 +15,23 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session || session.role !== UserRole.ADMIN) {
-    return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
-  }
+  const session = await requireStaffSession();
+  if (!session) return staffUnauthorized();
 
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Dữ liệu không hợp lệ" }, { status: 400 });
   }
+
+  const existing = await prisma.meterReading.findUnique({
+    where: { id: parsed.data.readingId },
+    select: { householdId: true },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Không tìm thấy chỉ số" }, { status: 404 });
+  }
+  const denied = await authorizeHouseholdAction(session, existing.householdId);
+  if (denied) return denied;
 
   try {
     const reading = await rejectReading({
@@ -27,7 +39,7 @@ export async function POST(request: Request) {
       actorId: session.id,
       reason: parsed.data.reason,
     });
-    revalidatePath("/admin/billing-sheet");
+    revalidateStaffBillingPaths();
     return NextResponse.json({ ok: true, reading });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Không từ chối được";

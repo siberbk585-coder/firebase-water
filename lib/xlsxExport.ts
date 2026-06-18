@@ -1,7 +1,7 @@
 import type { InputMethod, ReadingStatus } from "@/lib/types/enums";
 import * as XLSX from "xlsx-js-style";
 import { parseAnomalyFlags } from "./anomaly";
-import { loadBillingSheetRows, loadRouteSummaries } from "./billingSheet";
+import { loadBillingSheetRows } from "./billingSheet";
 import { prisma } from "./db";
 import { formatDateTimeVN } from "./datetime";
 import {
@@ -258,6 +258,33 @@ function sheetNameSafe(name: string): string {
   return s || "Sheet";
 }
 
+function formulaSheetRef(sheetName: string): string {
+  return `'${sheetName.replace(/'/g, "''")}'`;
+}
+
+function formulaRange(sheetName: string, col: string, rowCount: number): string {
+  const end = Math.max(2, rowCount + 1);
+  return `${formulaSheetRef(sheetName)}!${col}2:${col}${end}`;
+}
+
+function setFormula(
+  ws: XLSX.WorkSheet,
+  row: number,
+  col: number,
+  formula: string,
+  style?: XLSX.CellObject["s"],
+  numFmt?: string
+) {
+  const ref = XLSX.utils.encode_cell({ r: row, c: col });
+  ws[ref] = {
+    t: "n",
+    v: 0,
+    f: formula,
+    ...(numFmt ? { z: numFmt } : {}),
+    ...(style ? { s: style } : {}),
+  };
+}
+
 /** Workbook giống Excel vận hành: mỗi tuyến một sheet + TỔNG HỢP. */
 export async function buildPeriodRouteWorkbook(periodId: string): Promise<XLSX.WorkBook> {
   const period = await prisma.billingPeriod.findUniqueOrThrow({ where: { id: periodId } });
@@ -312,6 +339,7 @@ export async function buildPeriodRouteWorkbook(periodId: string): Promise<XLSX.W
     routes.length > 0
       ? routes.map((route) => ({ id: route.id as string | null, name: route.name }))
       : [{ id: null, name: "TAT CA" }];
+  const routeSheetMetas: { routeName: string; sheetName: string; rowCount: number }[] = [];
 
   for (const route of routeSheets) {
     const rows = await loadBillingSheetRows(periodId, route.id);
@@ -337,7 +365,7 @@ export async function buildPeriodRouteWorkbook(periodId: string): Promise<XLSX.W
       "Đã thu (TT)": r.paid ? "Đã thu" : r.invoiceId ? "Chưa" : "",
       "Hình thức TT": r.paymentMethod ? paymentMethodLabel(r.paymentMethod) : "",
     }));
-    const ws = sheetFromRows(sheetRows);
+    const ws = XLSX.utils.json_to_sheet(sheetRows, { header: editableHeaders });
     applyHeaderStyle(ws);
     highlightEditableColumns(ws, editableHeaders);
     ws["!cols"] = [
@@ -356,22 +384,119 @@ export async function buildPeriodRouteWorkbook(periodId: string): Promise<XLSX.W
       { wch: 14 },
       { wch: 16 },
     ];
-    XLSX.utils.book_append_sheet(wb, ws, sheetNameSafe(`${route.name} (${periodTitle})`));
+    const sheetName = sheetNameSafe(`${route.name} (${periodTitle})`);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    routeSheetMetas.push({ routeName: route.name, sheetName, rowCount: rows.length });
   }
 
-  const summaries = await loadRouteSummaries(periodId);
-  const summaryWs = sheetFromRows(
-    summaries.map((s) => ({
-      Tuyến: s.routeName,
-      "Số hộ": s.householdCount,
-      "Đã ghi CSM": s.recordedCount,
-      "Chờ duyệt": s.pendingCount,
-      "Tổng STT (m³)": s.totalUsageM3,
-      "Tổng TT (VND)": s.totalAmount,
-    }))
-  );
-  applyHeaderStyle(summaryWs);
-  XLSX.utils.book_append_sheet(wb, summaryWs, sheetNameSafe("TONG HOP"));
+  const summaryHeaders = [
+    "Tuyến",
+    "Sheet nguồn",
+    "Số hộ",
+    "Đã ghi CSM",
+    "Chưa ghi",
+    "Chờ chốt",
+    "Đã xác nhận",
+    "Từ chối",
+    "Tổng m³",
+    "Tổng tiền",
+    "Đã thu",
+    "Chưa thu",
+    "Tiền đã thu",
+    "Tiền chưa thu",
+  ];
+  const summaryWs = XLSX.utils.aoa_to_sheet([
+    [`Tổng hợp kỳ ${formatPeriod(period.month, period.year)}`],
+    ["Các chỉ tiêu dùng công thức tham chiếu các sheet tuyến trong workbook."],
+    [],
+    summaryHeaders,
+    ...routeSheetMetas.map((route) => [route.routeName, route.sheetName]),
+    ["Tổng cộng"],
+  ]);
+  summaryWs["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: summaryHeaders.length - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: summaryHeaders.length - 1 } },
+  ];
+  summaryWs["!cols"] = [
+    { wch: 18 },
+    { wch: 24 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 14 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 14 },
+    { wch: 14 },
+  ];
+  summaryWs.A1.s = {
+    font: { bold: true, sz: 14 },
+    fill: headerFill,
+    alignment: { horizontal: "center", vertical: "center" },
+  };
+  summaryWs.A2.s = { font: { italic: true, color: { rgb: "64748B" } } };
+  for (let c = 0; c < summaryHeaders.length; c++) {
+    const ref = XLSX.utils.encode_cell({ r: 3, c });
+    summaryWs[ref] = summaryWs[ref] ?? { t: "s", v: "" };
+    summaryWs[ref].s = {
+      font: { bold: true },
+      fill: headerFill,
+      alignment: { horizontal: "center", vertical: "center" },
+    };
+  }
+  const numberStyle = { alignment: { horizontal: "right" } };
+  const countFormat = "#,##0";
+  const moneyFormat = "#,##0 [$₫-vi-VN]";
+  routeSheetMetas.forEach((route, index) => {
+    const row = 4 + index;
+    const excelRow = row + 1;
+    const households = formulaRange(route.sheetName, "D", route.rowCount);
+    const csm = formulaRange(route.sheetName, "H", route.rowCount);
+    const status = formulaRange(route.sheetName, "I", route.rowCount);
+    const usage = formulaRange(route.sheetName, "K", route.rowCount);
+    const amount = formulaRange(route.sheetName, "L", route.rowCount);
+    const paid = formulaRange(route.sheetName, "M", route.rowCount);
+    setFormula(summaryWs, row, 2, `COUNTA(${households})`, numberStyle, countFormat);
+    setFormula(summaryWs, row, 3, `COUNT(${csm})`, numberStyle, countFormat);
+    setFormula(summaryWs, row, 4, `C${excelRow}-D${excelRow}`, numberStyle, countFormat);
+    setFormula(summaryWs, row, 5, `COUNTIF(${status},"Chờ xử lý")`, numberStyle, countFormat);
+    setFormula(summaryWs, row, 6, `COUNTIF(${status},"Đã xác nhận")`, numberStyle, countFormat);
+    setFormula(summaryWs, row, 7, `COUNTIF(${status},"Từ chối")`, numberStyle, countFormat);
+    setFormula(summaryWs, row, 8, `SUM(${usage})`, numberStyle, countFormat);
+    setFormula(summaryWs, row, 9, `SUM(${amount})`, numberStyle, moneyFormat);
+    setFormula(summaryWs, row, 10, `COUNTIF(${paid},"Đã thu")`, numberStyle, countFormat);
+    setFormula(summaryWs, row, 11, `COUNTIF(${paid},"Chưa")`, numberStyle, countFormat);
+    setFormula(summaryWs, row, 12, `SUMIF(${paid},"Đã thu",${amount})`, numberStyle, moneyFormat);
+    setFormula(summaryWs, row, 13, `SUMIF(${paid},"Chưa",${amount})`, numberStyle, moneyFormat);
+  });
+  const totalRow = 4 + routeSheetMetas.length;
+  const firstRouteRow = 5;
+  const lastRouteRow = Math.max(firstRouteRow, totalRow);
+  for (let c = 2; c < summaryHeaders.length; c++) {
+    const col = XLSX.utils.encode_col(c);
+    const numFmt = c === 9 || c === 12 || c === 13 ? moneyFormat : countFormat;
+    setFormula(summaryWs, totalRow, c, `SUM(${col}${firstRouteRow}:${col}${lastRouteRow})`, {
+      font: { bold: true },
+      fill: editableFill,
+      alignment: { horizontal: "right" },
+    }, numFmt);
+  }
+  summaryWs.A1.s = { ...(summaryWs.A1.s ?? {}), font: { bold: true, sz: 14 } };
+  summaryWs.A2.s = { ...(summaryWs.A2.s ?? {}), font: { italic: true, color: { rgb: "64748B" } } };
+  const totalLabelRef = XLSX.utils.encode_cell({ r: totalRow, c: 0 });
+  summaryWs[totalLabelRef].s = { font: { bold: true }, fill: editableFill };
+  summaryWs["!ref"] = XLSX.utils.encode_range({
+    s: { r: 0, c: 0 },
+    e: { r: totalRow, c: summaryHeaders.length - 1 },
+  });
+  XLSX.utils.book_append_sheet(wb, summaryWs, "Tổng hợp");
+  wb.SheetNames = ["HUONG DAN", "Tổng hợp", ...routeSheetMetas.map((r) => r.sheetName)];
+  const workbookMeta = (wb.Workbook ??= {}) as Record<string, unknown>;
+  workbookMeta.CalcPr = { fullCalcOnLoad: "1" };
 
   return wb;
 }

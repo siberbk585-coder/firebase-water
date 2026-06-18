@@ -5,9 +5,13 @@ import { calculateUsage } from "./billing";
 import { buildImageFilename } from "./filename";
 import { uploadReadingImageViaN8n } from "./imageUpload";
 import { logAudit } from "./audit";
+import { isHouseholdBillableInPeriod } from "./householdBillable";
 import { meterReadingAuditMetadata } from "./auditDisplay";
 import { assertPriorPeriodReadingConfirmed } from "./periodChain";
 import { formatPeriod } from "./vi";
+
+/** CSC khi hộ/chỉ số chưa có kỳ CONFIRMED trước đó (không dùng số giả từ mã đồng hồ). */
+export const DEFAULT_OLD_READING_NO_PRIOR = 0;
 
 export async function getAvgUsage3Months(
   householdId: string,
@@ -93,9 +97,7 @@ export async function getOldReading(householdId: string, periodId: string): Prom
     orderBy: [{ period: { year: "desc" } }, { period: { month: "desc" } }],
   });
   if (prev?.confirmedValue != null) return prev.confirmedValue;
-  const household = await prisma.household.findUniqueOrThrow({ where: { id: householdId } });
-  const base = parseInt(household.meterCode.replace(/\D/g, "").slice(-3) || "100", 10);
-  return 100 + (base % 50);
+  return DEFAULT_OLD_READING_NO_PRIOR;
 }
 
 export async function confirmReading(params: {
@@ -171,10 +173,27 @@ export async function submitManualReading(params: {
   fileExt?: string;
   actorId?: string;
 }) {
-  const household = await prisma.household.findUniqueOrThrow({
-    where: { id: params.householdId },
-    select: { householdCode: true, meterCode: true, residentName: true },
-  });
+  const [household, period] = await Promise.all([
+    prisma.household.findUniqueOrThrow({
+      where: { id: params.householdId },
+      select: {
+        householdCode: true,
+        meterCode: true,
+        residentName: true,
+        status: true,
+        inactiveFromYear: true,
+        inactiveFromMonth: true,
+      },
+    }),
+    prisma.billingPeriod.findUniqueOrThrow({
+      where: { id: params.periodId },
+      select: { year: true, month: true },
+    }),
+  ]);
+
+  if (!isHouseholdBillableInPeriod(household, period.year, period.month)) {
+    throw new Error("Hộ đã ngưng sử dụng — không thể gửi chỉ số kỳ này.");
+  }
 
   const oldReading = await getOldReading(params.householdId, params.periodId);
 
@@ -239,10 +258,6 @@ export async function submitManualReading(params: {
       });
 
   if (params.actorId) {
-    const period = await prisma.billingPeriod.findUnique({
-      where: { id: params.periodId },
-      select: { month: true, year: true },
-    });
     await logAudit({
       actorId: params.actorId,
       action: "READING_SUBMITTED",
@@ -250,7 +265,7 @@ export async function submitManualReading(params: {
       entityId: reading.id,
       metadata: meterReadingAuditMetadata(reading, household, {
         coAnh: Boolean(imagePath),
-        ...(period ? { ky: formatPeriod(period.month, period.year) } : {}),
+        ky: formatPeriod(period.month, period.year),
         phuongThuc: inputMethod,
       }),
     });
@@ -364,6 +379,8 @@ export async function adminUpsertReading(params: {
   confirmedValue: number;
   actorId: string;
   auditExtra?: Record<string, unknown>;
+  /** ADMIN — cho phép sửa hộ đã xác nhận thu tiền */
+  allowPaidEdit?: boolean;
 }) {
   const paidInvoice = await prisma.invoice.findFirst({
     where: {
@@ -373,7 +390,7 @@ export async function adminUpsertReading(params: {
     },
     select: { id: true },
   });
-  if (paidInvoice) {
+  if (paidInvoice && !params.allowPaidEdit) {
     throw new Error("Không thể chốt lại — hóa đơn kỳ này đã được xác nhận thu");
   }
 

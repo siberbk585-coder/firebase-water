@@ -12,8 +12,7 @@ Mở file này lần sau để nhanh chóng tiếp tục.
 | App Hosting trực tiếp | https://tiennuoc--tiennuoc.asia-southeast1.hosted.app/login |
 | Firebase project | `tiennuoc` |
 | Cloud SQL | `tiennuoc-db` / DB `tiennuoc_water` |
-| Admin | `admin` / `123456` |
-| Hộ mock | `0931000001` … `0931000050` / `123456` |
+| Đăng nhập | Tài khoản do quản trị HTX cấp |
 
 Đăng nhập: nhập **SĐT** hoặc `admin` (không gõ `@accounts.tiennuoc.local`).
 
@@ -35,7 +34,7 @@ Mở file này lần sau để nhanh chóng tiếp tục.
 ### Chỉ dùng web production
 
 1. Mở https://tiennuoc.web.app/login  
-2. Đăng nhập `admin` / `123456`  
+2. Đăng nhập bằng tài khoản do quản trị cấp  
 3. Nếu 500 / không vào được → xem [Sự cố thường gặp](#sự-cố-thường-gặp)
 
 ### Làm việc local (DB + script)

@@ -16,14 +16,9 @@ Brief UI/luồng màn hình: [FLUTTER_ANDROID_AGENT_BRIEF.md](./FLUTTER_ANDROID_
 | **Timezone** | `Asia/Ho_Chi_Minh` |
 | **Repo web** | `git@github.com:siberbk585-coder/firebase-water.git` |
 
-### Tài khoản test
+### Tài khoản
 
-| Vai trò | `phone` | Mật khẩu |
-|---------|---------|----------|
-| Admin / nhân viên thu | `admin` | `123456` |
-| Hộ dân (không dùng app thu MVP) | `0931000001` … `0931000050` | `123456` |
-
-`phone` gửi API là chuỗi thuần (`admin`, `0931000001`), **không** thêm email.
+Tài khoản do **quản trị HTX** cấp (SĐT hoặc `admin` + mật khẩu). `phone` gửi API là chuỗi thuần, **không** thêm domain email.
 
 ### Phạm vi app Android MVP
 
@@ -41,8 +36,8 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "phone": "admin",
-  "password": "123456"
+  "phone": "<số-điện-thoại-hoặc-admin>",
+  "password": "<mật-khẩu>"
 }
 ```
 

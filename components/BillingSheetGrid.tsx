@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import type { BillingSheetRow } from "@/lib/billingSheet";
 import {
@@ -17,6 +24,11 @@ import {
   type BillingSheetStatusFilter,
   matchesBillingSheetStatusFilter,
 } from "@/lib/billingSheetFilters";
+import {
+  BILLING_SHEET_SEARCH_EVENT,
+  billingSheetSearchScore,
+  matchesBillingSheetSearch,
+} from "@/lib/billingSheetSearch";
 
 export type ReadingStatusFilter = BillingSheetStatusFilter;
 
@@ -61,19 +73,26 @@ type Props = {
   periodId: string;
   rows: BillingSheetRow[];
   statusFilter?: BillingSheetStatusFilter;
+  initialSearchQuery?: string;
   vatPercent?: number;
   /** Bảng tổng — hiện cột khu vực */
   showRoute?: boolean;
+  /** ADMIN — cho phép sửa chỉ số hộ đã thu */
+  allowPaidEdit?: boolean;
 };
 
 export function BillingSheetGrid({
   periodId,
   rows,
   statusFilter = "all",
+  initialSearchQuery = "",
   vatPercent = 0,
   showRoute = false,
+  allowPaidEdit = false,
 }: Props) {
   const [localRows, setLocalRows] = useState(rows);
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -82,8 +101,19 @@ export function BillingSheetGrid({
   const printSelection = useBillingPrintSelectionOptional();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalRows(rows);
   }, [rows]);
+
+  useEffect(() => {
+    function onSearch(event: Event) {
+      const detail = (event as CustomEvent<{ query?: string }>).detail;
+      setSearchQuery(detail?.query ?? "");
+    }
+
+    window.addEventListener(BILLING_SHEET_SEARCH_EVENT, onSearch);
+    return () => window.removeEventListener(BILLING_SHEET_SEARCH_EVENT, onSearch);
+  }, []);
 
   useEffect(() => {
     if (!savedHint) return;
@@ -91,9 +121,25 @@ export function BillingSheetGrid({
     return () => window.clearTimeout(t);
   }, [savedHint]);
 
+  const searchMatchedRows = useMemo(() => {
+    if (!deferredSearchQuery.trim()) return localRows;
+    const matched = localRows.filter((r) =>
+      matchesBillingSheetSearch(r, deferredSearchQuery)
+    );
+    return [...matched].sort((a, b) => {
+      const sa = billingSheetSearchScore(a, deferredSearchQuery);
+      const sb = billingSheetSearchScore(b, deferredSearchQuery);
+      if (sb !== sa) return sb - sa;
+      return (a.routeSortOrder ?? 0) - (b.routeSortOrder ?? 0);
+    });
+  }, [localRows, deferredSearchQuery]);
+
+  const isSearchPending =
+    searchQuery.trim() !== deferredSearchQuery.trim();
+
   const filteredRows = useMemo(
-    () => localRows.filter((r) => matchesBillingSheetStatusFilter(r, statusFilter)),
-    [localRows, statusFilter]
+    () => searchMatchedRows.filter((r) => matchesBillingSheetStatusFilter(r, statusFilter)),
+    [searchMatchedRows, statusFilter]
   );
 
   const confirmedVisibleIds = useMemo(
@@ -400,6 +446,15 @@ export function BillingSheetGrid({
           {savedHint}
         </p>
       )}
+      {deferredSearchQuery.trim() && (
+        <p className="mb-3 text-sm text-[var(--muted)]">
+          Tìm thấy <strong>{filteredRows.length}</strong>/{localRows.length} hộ cho “
+          {deferredSearchQuery.trim()}”.
+          {isSearchPending && (
+            <span className="ml-1 text-xs opacity-70">(đang lọc…)</span>
+          )}
+        </p>
+      )}
       <div className="space-y-3 md:hidden">
         {printSelection && confirmedVisibleIds.length > 0 && (
           <label className="mobile-action-card flex items-center justify-between gap-3 text-sm font-semibold">
@@ -485,8 +540,14 @@ export function BillingSheetGrid({
                     className="input mt-1 py-2 text-right font-mono tabular-nums disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="—"
                     value={draft}
-                    disabled={row.paid}
-                    title={row.paid ? "Đã xác nhận thu — không thể sửa chỉ số" : undefined}
+                    disabled={row.paid && !allowPaidEdit}
+                    title={
+                      row.paid && !allowPaidEdit
+                        ? "Đã xác nhận thu — không thể sửa chỉ số"
+                        : row.paid && allowPaidEdit
+                          ? "Admin: sửa chỉ số hộ đã thu"
+                          : undefined
+                    }
                     onChange={(e) => setDraft(row.householdId, e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -506,7 +567,7 @@ export function BillingSheetGrid({
                 {showVatColumns ? (
                   <>
                     <div>
-                      <span className="mobile-meta-label">Giá</span>
+                      <span className="mobile-meta-label">Giá (trước thuế)</span>
                       <span className="font-mono tabular-nums text-[var(--muted)]">
                         {formatBillingAmountCell(amounts.subtotal)}
                       </span>
@@ -534,7 +595,7 @@ export function BillingSheetGrid({
               )}
 
               <div className="mt-3 grid grid-cols-2 gap-2">
-                {row.paid ? (
+                {row.paid && !allowPaidEdit ? (
                   <span className="btn btn-secondary col-span-2 cursor-default text-xs text-[var(--muted)]">
                     Đã khóa chỉ số
                   </span>
@@ -564,7 +625,11 @@ export function BillingSheetGrid({
                     disabled={saving === row.householdId}
                     onClick={() => void saveRow(row)}
                   >
-                    {saving === row.householdId ? "Đang lưu..." : "Lưu chỉ số"}
+                    {saving === row.householdId
+                      ? "Đang lưu..."
+                      : row.paid && allowPaidEdit
+                        ? "Cập nhật"
+                        : "Lưu chỉ số"}
                   </button>
                 )}
 
@@ -669,19 +734,19 @@ export function BillingSheetGrid({
               <>
                 <th
                   className="billing-sheet-col-num billing-sheet-col-gia text-right"
-                  title="m³ × đơn giá"
+                  title="Tiền nước trước thuế (tách từ thành tiền)"
                 >
-                  Giá
+                  Giá (trước thuế)
                 </th>
                 <th
                   className="billing-sheet-col-num billing-sheet-col-vat text-right"
-                  title={`Thuế GTGT ${vatPercent}%`}
+                  title={`Thuế GTGT ${vatPercent}% (trong đơn giá đã gồm VAT)`}
                 >
                   GTGT
                 </th>
                 <th
                   className="billing-sheet-col-num billing-sheet-col-total text-right"
-                  title="Giá + Thuế GTGT"
+                  title="m³ × đơn giá (đã gồm VAT)"
                 >
                   Thành tiền
                 </th>
@@ -763,8 +828,14 @@ export function BillingSheetGrid({
                     className="billing-sheet-csm-input input py-1 text-right font-mono tabular-nums disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="—"
                     value={draft}
-                    disabled={row.paid}
-                    title={row.paid ? "Đã xác nhận thu — không thể sửa chỉ số" : undefined}
+                    disabled={row.paid && !allowPaidEdit}
+                    title={
+                      row.paid && !allowPaidEdit
+                        ? "Đã xác nhận thu — không thể sửa chỉ số"
+                        : row.paid && allowPaidEdit
+                          ? "Admin: sửa chỉ số hộ đã thu"
+                          : undefined
+                    }
                     onChange={(e) => setDraft(row.householdId, e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -796,7 +867,7 @@ export function BillingSheetGrid({
                 </td>
                 <td className="billing-sheet-col-actions space-y-1 text-center text-xs">
                   <div className="mx-auto flex min-w-[6.5rem] flex-col gap-1">
-                    {row.paid ? (
+                    {row.paid && !allowPaidEdit ? (
                       <span
                         className="text-[10px] text-[var(--muted)]"
                         title="Đã xác nhận thu — không thể sửa chỉ số"
@@ -829,7 +900,11 @@ export function BillingSheetGrid({
                         disabled={saving === row.householdId}
                         onClick={() => void saveRow(row)}
                       >
-                        {saving === row.householdId ? "…" : "Lưu"}
+                        {saving === row.householdId
+                          ? "…"
+                          : row.paid && allowPaidEdit
+                            ? "Cập nhật"
+                            : "Lưu"}
                       </button>
                     )}
                   </div>

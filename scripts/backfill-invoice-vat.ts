@@ -1,5 +1,6 @@
 /**
- * Ghi GTGT vào DB cho hóa đơn migrate (vat_amount=0, total=subtotal).
+ * Tách GTGT từ thành tiền đã gồm VAT (vat=0, total=subtotal) — không tăng thành tiền.
+ * Không áp lên HĐ đã PAID (dùng db:apply-vat-inclusive cho toàn bộ kỳ).
  *
  *   npm run db:backfill-invoice-vat -- --dry-run
  *   ALLOW_DESTRUCTIVE_DB=yes-I-know npm run db:backfill-invoice-vat
@@ -8,10 +9,9 @@ import { InvoiceStatus } from "@prisma/client";
 import { createPrismaTiennuoc } from "./prisma-tiennuoc";
 import { assertDestructiveAllowed } from "../lib/destructiveDbGuard";
 import {
-  applyVatToSubtotal,
-  calculateBillingAmounts,
   invoiceNeedsVatBackfill,
   normalizeVatPercent,
+  splitVatInclusiveTotal,
 } from "../lib/vat";
 
 const dryRun = process.argv.includes("--dry-run");
@@ -27,7 +27,7 @@ async function main() {
       where: { id: "default" },
       select: { vatPercent: true },
     });
-    const vatPercent = normalizeVatPercent(settings?.vatPercent ?? 10);
+    const vatPercent = normalizeVatPercent(settings?.vatPercent ?? 5);
     if (vatPercent <= 0) {
       console.log("Thuế GTGT = 0% — không cần backfill.");
       return;
@@ -35,7 +35,13 @@ async function main() {
 
     const invoices = await prisma.invoice.findMany({
       where: {
-        status: { notIn: [InvoiceStatus.DRAFT, InvoiceStatus.CANCELLED] },
+        status: {
+          notIn: [
+            InvoiceStatus.DRAFT,
+            InvoiceStatus.CANCELLED,
+            InvoiceStatus.PAID,
+          ],
+        },
         vatAmount: 0,
       },
       select: {
@@ -63,15 +69,12 @@ async function main() {
         continue;
       }
 
-      const amounts =
-        inv.subtotalAmount > 0
-          ? applyVatToSubtotal(inv.subtotalAmount, vatPercent)
-          : calculateBillingAmounts(inv.usageM3, inv.unitPrice, vatPercent);
+      const amounts = splitVatInclusiveTotal(inv.totalAmount, vatPercent);
 
       const label = `${inv.household.householdCode} T${inv.period.month}/${inv.period.year} ${inv.status}`;
       if (samples.length < 5) {
         samples.push(
-          `${label}: ${inv.totalAmount} → ${amounts.totalAmount} (+GTGT ${amounts.vatAmount})`
+          `${label}: total ${amounts.totalAmount} → Giá ${amounts.subtotal} + GTGT ${amounts.vatAmount}`
         );
       }
 

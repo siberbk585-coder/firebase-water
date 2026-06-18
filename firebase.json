@@ -64,10 +64,10 @@
   },
   "appDistribution": {
     "androidGroups": [
-      "testers"
+      "nhóm-app-tiền-nước"
     ],
     "iosGroups": [
-      "testers"
+      "nhóm-app-tiền-nước"
     ]
   }
 }

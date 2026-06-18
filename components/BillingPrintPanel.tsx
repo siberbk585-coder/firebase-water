@@ -1,39 +1,69 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { ReadingStatus } from "@/lib/types/enums";
 import { useBillingPrintSelectionOptional } from "@/components/billing-print-selection";
 import { isRestrictedWebView, openPdfBlob } from "@/lib/pdfBlobUi";
+import {
+  BILLING_SHEET_SEARCH_EVENT,
+  billingSheetSearchScore,
+  matchesBillingSheetSearch,
+} from "@/lib/billingSheetSearch";
 
 export type BillingPrintRow = {
   householdId: string;
   householdCode: string;
+  meterCode?: string | null;
   residentName: string;
+  address?: string | null;
+  contactPhone?: string | null;
+  routeName?: string | null;
   status: ReadingStatus | null;
 };
 
 type Props = {
   periodId: string;
   rows: BillingPrintRow[];
+  initialSearchQuery?: string;
 };
 
-export function BillingPrintPanel({ periodId, rows }: Props) {
+export function BillingPrintPanel({ periodId, rows, initialSearchQuery = "" }: Props) {
   const selection = useBillingPrintSelectionOptional();
-  const selectedIds = selection ? [...selection.selectedIds] : [];
   const router = useRouter();
   const [loading, setLoading] = useState<"batch" | "one" | null>(null);
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  useEffect(() => {
+    function onSearch(event: Event) {
+      const detail = (event as CustomEvent<{ query?: string }>).detail;
+      setSearchQuery(detail?.query ?? "");
+    }
+
+    window.addEventListener(BILLING_SHEET_SEARCH_EVENT, onSearch);
+    return () => window.removeEventListener(BILLING_SHEET_SEARCH_EVENT, onSearch);
+  }, []);
+
+  const visibleRows = useMemo(() => {
+    if (!deferredSearchQuery.trim()) return rows;
+    const matched = rows.filter((r) => matchesBillingSheetSearch(r, deferredSearchQuery));
+    return [...matched].sort((a, b) => {
+      const sa = billingSheetSearchScore(a, deferredSearchQuery);
+      const sb = billingSheetSearchScore(b, deferredSearchQuery);
+      return sb - sa;
+    });
+  }, [rows, deferredSearchQuery]);
 
   const confirmedOnTable = useMemo(
-    () => rows.filter((r) => r.status === ReadingStatus.CONFIRMED),
-    [rows]
+    () => visibleRows.filter((r) => r.status === ReadingStatus.CONFIRMED),
+    [visibleRows]
   );
 
   const selectedConfirmed = useMemo(() => {
-    if (!selectedIds.length) return [];
-    const set = new Set(selectedIds);
-    return confirmedOnTable.filter((r) => set.has(r.householdId));
-  }, [confirmedOnTable, selectedIds]);
+    if (!selection?.selectedIds.size) return [];
+    return confirmedOnTable.filter((r) => selection.selectedIds.has(r.householdId));
+  }, [confirmedOnTable, selection]);
 
   const batchTargets =
     selectedConfirmed.length > 0 ? selectedConfirmed : confirmedOnTable;

@@ -11,9 +11,23 @@ export function calendarPriorPeriod(year: number, month: number): {
   return { year, month: month - 1 };
 }
 
+function hasEnteredReading(reading: {
+  confirmedValue: number | null;
+  ocrValue: number | null;
+  imagePath: string | null;
+}): boolean {
+  return (
+    reading.confirmedValue != null ||
+    reading.ocrValue != null ||
+    Boolean(reading.imagePath)
+  );
+}
+
 /**
- * Chốt chỉ số kỳ hiện tại chỉ khi kỳ liền trước đã CONFIRMED.
- * Hóa đơn kỳ trước ISSUED/chưa thu vẫn cho phép (đã chốt số).
+ * Kỳ liền trước đã CONFIRMED thì cho phép.
+ * Nếu kỳ liền trước trống/chưa ghi thì cho phép bỏ qua; kỳ hiện tại sẽ tính dồn
+ * từ kỳ CONFIRMED gần nhất trước đó.
+ * Chỉ chặn khi kỳ liền trước đã có dữ liệu nhập/chụp ảnh nhưng chưa được chốt.
  */
 export async function assertPriorPeriodReadingConfirmed(
   householdId: string,
@@ -30,10 +44,30 @@ export async function assertPriorPeriodReadingConfirmed(
     where: {
       householdId_periodId: { householdId, periodId: priorPeriod.id },
     },
-    select: { status: true },
+    select: {
+      status: true,
+      confirmedValue: true,
+      ocrValue: true,
+      imagePath: true,
+    },
   });
 
   if (priorReading?.status === ReadingStatus.CONFIRMED) return;
+  if (!priorReading || !hasEnteredReading(priorReading)) return;
+
+  const hasAnyEarlierReading = await prisma.meterReading.findFirst({
+    where: {
+      householdId,
+      period: {
+        OR: [
+          { year: { lt: period.year } },
+          { year: period.year, month: { lt: period.month } },
+        ],
+      },
+    },
+    select: { id: true },
+  });
+  if (!hasAnyEarlierReading) return;
 
   throw new Error(
     `Chưa chốt chỉ số ${formatPeriod(prior.month, prior.year)} — cần chốt kỳ trước mới được chốt ${formatPeriod(period.month, period.year)}.`

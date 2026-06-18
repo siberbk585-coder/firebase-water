@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
 import { loadBillingSheetRows } from "@/lib/billingSheet";
-import { UserRole } from "@/lib/types/enums";
+import { matchesBillingSheetSearch } from "@/lib/billingSheetSearch";
+import {
+  assertCollectorRouteAccess,
+  CollectorAccessError,
+  getCollectorRouteIds,
+  isAdmin,
+} from "@/lib/collectorAccess";
+import {
+  requireStaffSession,
+  staffForbidden,
+  staffUnauthorized,
+} from "@/lib/staffAuth";
 
 export async function GET(request: Request) {
-  const session = await getSession();
-  if (!session || session.role !== UserRole.ADMIN) {
-    return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
-  }
+  const session = await requireStaffSession();
+  if (!session) return staffUnauthorized();
 
   const { searchParams } = new URL(request.url);
   const periodId = searchParams.get("periodId");
@@ -16,17 +24,36 @@ export async function GET(request: Request) {
   }
 
   const routeId = searchParams.get("routeId");
-  const q = searchParams.get("q")?.trim().toLowerCase();
+  const q = searchParams.get("q")?.trim() ?? "";
 
-  let rows = await loadBillingSheetRows(periodId, routeId || null);
+  const allowedRouteIds = isAdmin(session) ? undefined : await getCollectorRouteIds(session.id);
+
+  if (!isAdmin(session) && routeId) {
+    try {
+      await assertCollectorRouteAccess(session, routeId);
+    } catch (e) {
+      if (e instanceof CollectorAccessError) return staffForbidden(e.message);
+      throw e;
+    }
+  }
+
+  let rows = await loadBillingSheetRows(periodId, routeId || null, {
+    allowedRouteIds,
+  });
 
   if (q) {
-    rows = rows.filter(
-      (r) =>
-        r.residentName.toLowerCase().includes(q) ||
-        r.meterCode.toLowerCase().includes(q) ||
-        r.householdCode.toLowerCase().includes(q) ||
-        (r.contactPhone?.toLowerCase().includes(q) ?? false)
+    rows = rows.filter((r) =>
+      matchesBillingSheetSearch(
+        {
+          householdCode: r.householdCode,
+          meterCode: r.meterCode,
+          residentName: r.residentName,
+          address: r.address,
+          contactPhone: r.contactPhone,
+          routeName: r.routeName,
+        },
+        q
+      )
     );
   }
 

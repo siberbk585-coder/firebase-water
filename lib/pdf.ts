@@ -2,8 +2,18 @@ import { PDFDocument } from "pdf-lib";
 import { Resvg } from "@resvg/resvg-js";
 import { join } from "path";
 import { amountInWordsVn } from "./amountInWords";
-import { displayResidentName } from "./receiptDisplay";
-import { fetchPaymentQrImage } from "./paymentQr";
+import {
+  displayResidentName,
+  formatReceiptAddress,
+  getReceiptBankTransferInfo,
+  receiptAscii,
+} from "./receiptDisplay";
+import {
+  getReceiptBankQrBuffer,
+  receiptBankQrDataUri,
+  receiptQrSideColumnSizePx,
+} from "./receiptQr";
+import { receiptUnitPriceDisplay } from "./vat";
 
 /** Font kiểu máy in bill / siêu thị (monospace, hẹp). */
 const RECEIPT_FONT = "'Roboto Mono', monospace";
@@ -21,6 +31,15 @@ const PAD = 24;
 const RIGHT = SVG_WIDTH - PAD;
 const MID = SVG_WIDTH / 2;
 const LINE_H = 22;
+const CONTENT_W = SVG_WIDTH - PAD * 2;
+const COL_HALF = CONTENT_W / 2;
+const LEFT_X = PAD;
+const RIGHT_COL_X = PAD + COL_HALF;
+
+/** Bill in không dấu — tránh lỗi font máy in. */
+function r(value: string): string {
+  return receiptAscii(value);
+}
 
 export type InvoicePdfData = {
   invoiceCode: string;
@@ -74,9 +93,9 @@ function formatReceiptUnitPrice(value: number): string {
 }
 
 function issuerName(): string {
-  return (
+  return r(
     process.env.INVOICE_ISSUER_NAME?.trim() ||
-    "Hợp tác xã thủy sản và dịch vụ môi trường Tiên Lãng"
+      "Hop tac xa thuy san va DV moi truong Tien Lang"
   );
 }
 
@@ -175,8 +194,8 @@ function dashedRule(y: number): string {
   });
 }
 
-function labelLine(y: number, label: string, value: string): string {
-  return receiptText(PAD, y, `${label} ${value}`, { size: 20, weight: 400 });
+function labelLine(y: number, label: string, value: string, x = PAD): string {
+  return receiptText(x, y, `${label} ${value}`, { size: 20, weight: 400 });
 }
 
 function periodCopyLabel(data: InvoicePdfData): string {
@@ -185,15 +204,72 @@ function periodCopyLabel(data: InvoicePdfData): string {
     data.periodMonth ??
     (Number(/\bT(\d{1,2})\b/i.exec(data.periodLabel)?.[1]) ||
       new Date().getMonth() + 1);
-  return `T${month}(Liên ${copy})`;
+  return `T${month}(Lien ${copy})`;
 }
 
 function collectorLine(data: InvoicePdfData): string {
-  return (
+  const name =
     data.collectorName?.trim() ||
     process.env.INVOICE_COLLECTOR_NAME?.trim() ||
-    ""
+    "";
+  return r(name);
+}
+
+function paymentMethodLabel(method: string | undefined): string {
+  const m = method?.trim().toLowerCase() ?? "";
+  if (m.includes("bank") || m.includes("chuyen")) return "Chuyen khoan";
+  return "Tien mat";
+}
+
+function bankTransferFooter(
+  y0: number,
+  bank: ReturnType<typeof getReceiptBankTransferInfo>,
+  qrUri: string | null
+): { svg: string; height: number } {
+  const leftMaxChars = Math.max(14, Math.floor(COL_HALF / 10));
+  const parts: string[] = [];
+  let leftY = y0;
+
+  parts.push(receiptText(LEFT_X, leftY, "Chu tai khoan:", { size: 18 }));
+  leftY += LINE_H;
+
+  const holder = receiptLines(LEFT_X, leftY, bank.accountHolder, {
+    maxChars: leftMaxChars,
+    maxLines: 3,
+    size: 18,
+    lineHeight: LINE_H,
+  });
+  parts.push(holder.svg);
+  leftY += holder.height;
+
+  parts.push(receiptText(LEFT_X, leftY, "So tai khoan:", { size: 18 }));
+  leftY += LINE_H;
+  parts.push(
+    receiptText(LEFT_X, leftY, bank.accountNumber, {
+      size: 18,
+      weight: 700,
+    })
   );
+  leftY += LINE_H;
+  parts.push(
+    receiptText(LEFT_X, leftY, `Ngan hang: ${bank.bankName}`, { size: 18 })
+  );
+  leftY += LINE_H;
+
+  const leftHeight = leftY - y0;
+  let blockHeight = leftHeight;
+
+  if (qrUri) {
+    const qrSize = receiptQrSideColumnSizePx(COL_HALF, LINE_H, leftHeight);
+    const qrX = RIGHT_COL_X + (COL_HALF - qrSize) / 2;
+    const qrY = y0 + Math.max(0, (leftHeight - qrSize) / 2);
+    parts.push(
+      `<image x="${qrX}" y="${qrY}" width="${qrSize}" height="${qrSize}" href="${qrUri}" preserveAspectRatio="xMidYMid meet"/>`
+    );
+    blockHeight = Math.max(leftHeight, qrSize);
+  }
+
+  return { svg: parts.join(""), height: blockHeight };
 }
 
 function qrDataUri(buffer: Buffer | null): string | null {
@@ -204,7 +280,14 @@ function qrDataUri(buffer: Buffer | null): string | null {
 function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   const subtotal = Math.round(data.subtotalAmount);
   const vatAmount = Math.round(data.vatAmount);
-  const paymentMethod = data.paymentMethod?.trim() || "Tiền mặt";
+  const vatPercent = data.vatPercent ?? 0;
+  const unitDisplay = receiptUnitPriceDisplay(
+    data.unitPrice,
+    data.usageM3,
+    subtotal,
+    vatPercent
+  );
+  const paymentMethod = paymentMethodLabel(data.paymentMethod);
   const arrears = data.arrearsM3 ?? 0;
   const parts: string[] = [];
   let y = 36;
@@ -227,7 +310,7 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   gap(6);
 
   push(
-    receiptText(MID, y, "BIÊN NHẬN THANH TOÁN", {
+    receiptText(MID, y, "BIEN NHAN THANH TOAN", {
       size: 22,
       weight: 700,
       anchor: "middle",
@@ -246,14 +329,20 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   push(
     labelLine(
       y,
-      "Tên KH:",
-      displayResidentName(data.residentName, data.householdCode).toUpperCase()
+      "Ten KH:",
+      r(
+        displayResidentName(data.residentName, data.householdCode)
+      ).toUpperCase()
     )
   );
   gap(LINE_H);
-  push(labelLine(y, "Mã KH:", data.householdCode));
+  push(labelLine(y, "Ma KH:", data.householdCode));
   gap(LINE_H);
-  const addr = receiptLines(PAD, y, `Địa chỉ: ${data.address || "-"}`, {
+  const addr = receiptLines(
+    PAD,
+    y,
+    `Dia chi: ${formatReceiptAddress(data.address)}`,
+    {
     maxChars: 34,
     maxLines: 4,
     size: 20,
@@ -263,17 +352,17 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   y += addr.height;
   gap(8);
 
-  push(labelLine(y, "NĐK: NCK:", ""));
+  push(labelLine(y, "NDK: NCK:", ""));
   gap(LINE_H);
-  push(labelLine(y, "Hình thức TT:", paymentMethod));
+  push(labelLine(y, "Hinh thuc TT:", paymentMethod));
   gap(LINE_H);
-  push(labelLine(y, "Nội dung:", "Thanh toán tiền nước"));
+  push(labelLine(y, "Noi dung:", "Thanh toan tien nuoc"));
   gap(LINE_H);
   push(
     receiptText(
       PAD,
       y,
-      `CS cũ: ${formatReceiptInt(data.oldReading)}    CS mới: ${formatReceiptInt(data.newReading)}`,
+      `CS cu: ${formatReceiptInt(data.oldReading)}    CS moi: ${formatReceiptInt(data.newReading)}`,
       { size: 20 }
     )
   );
@@ -282,7 +371,7 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   gap(16);
 
   push(
-    receiptText(MID, y, "SL(m³)  |  Đơn giá  |  Thành tiền", {
+    receiptText(MID, y, "SL(m3)  |  Don gia  |  Thanh tien", {
       size: 20,
       weight: 700,
       anchor: "middle",
@@ -293,7 +382,7 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
     receiptText(
       MID,
       y,
-      `${formatUsageM3(data.usageM3)}  |  ${formatReceiptUnitPrice(data.unitPrice)}  |  ${formatReceiptInt(subtotal)}`,
+      `${formatUsageM3(data.usageM3)}  |  ${formatReceiptUnitPrice(unitDisplay)}  |  ${formatReceiptInt(subtotal)}`,
       { size: 20,
         weight: 700,
         anchor: "middle",
@@ -304,16 +393,24 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   push(dashedRule(y));
   gap(14);
 
-  push(receiptText(PAD, y, "Thuế GTGT:", { size: 20 }));
-  push(
-    receiptText(RIGHT, y, formatReceiptInt(vatAmount), {
-      size: 20,
-      weight: 700,
-      anchor: "end",
-    })
-  );
-  gap(LINE_H);
-  push(receiptText(PAD, y, "Tổng tiền:", { size: 22, weight: 700 }));
+  const showVatLine =
+    vatAmount > 0 || (data.vatPercent != null && data.vatPercent > 0);
+  if (showVatLine) {
+    const vatLabel =
+      data.vatPercent != null && data.vatPercent > 0
+        ? `Thue GTGT (${data.vatPercent}%):`
+        : "Thue GTGT:";
+    push(receiptText(PAD, y, vatLabel, { size: 20 }));
+    push(
+      receiptText(RIGHT, y, formatReceiptInt(vatAmount), {
+        size: 20,
+        weight: 700,
+        anchor: "end",
+      })
+    );
+    gap(LINE_H);
+  }
+  push(receiptText(PAD, y, "Tong tien:", { size: 22, weight: 700 }));
   push(
     receiptText(RIGHT, y, formatReceiptInt(data.totalAmount), {
       size: 24,
@@ -323,8 +420,8 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   );
   gap(LINE_H);
 
-  const words = amountInWordsVn(data.totalAmount);
-  push(receiptText(PAD, y, "Bằng chữ:", { size: 20, weight: 700 }));
+  const words = r(amountInWordsVn(data.totalAmount));
+  push(receiptText(PAD, y, "Bang chu:", { size: 20, weight: 700 }));
   gap(LINE_H);
   const wordsBlock = receiptLines(PAD, y, words, {
     maxChars: 34,
@@ -338,7 +435,7 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
   push(dashedRule(y));
   gap(12);
 
-  push(labelLine(y, "Đ/c:", ""));
+  push(labelLine(y, "D/c:", ""));
   gap(LINE_H);
 
   const phones = data.contactPhones?.trim() || process.env.INVOICE_CONTACT_PHONES?.trim();
@@ -347,7 +444,7 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
     gap(LINE_H);
   }
 
-  push(labelLine(y, "Ngày", receiptDateTime()));
+  push(labelLine(y, "Ngay", receiptDateTime()));
   gap(LINE_H);
 
   const collector = collectorLine(data);
@@ -356,14 +453,13 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
     gap(LINE_H);
   }
 
-  if (qrUri && process.env.INVOICE_RECEIPT_QR === "true") {
-    gap(12);
-    const qrSize = 140;
-    push(
-      `<image x="${(SVG_WIDTH - qrSize) / 2}" y="${y}" width="${qrSize}" height="${qrSize}" href="${qrUri}" preserveAspectRatio="xMidYMid meet"/>`
-    );
-    y += qrSize + 12;
-  }
+  const bank = getReceiptBankTransferInfo();
+  gap(12);
+  push(dashedRule(y));
+  gap(12);
+  const bankBlock = bankTransferFooter(y, bank, qrUri);
+  push(bankBlock.svg);
+  y += bankBlock.height;
 
   const svgHeight = Math.ceil(y + 20);
 
@@ -374,13 +470,11 @@ function invoiceSvg(data: InvoicePdfData, qrUri: string | null): string {
 </svg>`;
 }
 
-export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
-  const transferNote = data.transferNote || `${data.meterCode} ${data.periodLabel}`;
-  const qrBuffer = await fetchPaymentQrImage({
-    amount: data.totalAmount,
-    addInfo: transferNote,
-  });
-  const svg = invoiceSvg(data, qrDataUri(qrBuffer));
+function renderSvgToPng(svg: string): {
+  png: Buffer;
+  width: number;
+  height: number;
+} {
   const resvg = new Resvg(svg, {
     font: {
       fontFiles: fontFilePaths(),
@@ -390,10 +484,28 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     background: "white",
   });
   const rendered = resvg.render();
-  const png = Buffer.from(rendered.asPng());
-  const imgW = rendered.width;
-  const imgH = rendered.height;
-  const pageH = (imgH / imgW) * RECEIPT_PT_WIDTH;
+  return {
+    png: Buffer.from(rendered.asPng()),
+    width: rendered.width,
+    height: rendered.height,
+  };
+}
+
+function receiptSvgForData(data: InvoicePdfData): string {
+  const qrBuffer = getReceiptBankQrBuffer();
+  return invoiceSvg(data, qrBuffer ? receiptBankQrDataUri(qrBuffer) : null);
+}
+
+/** PNG xem trước bill (~80mm) — demo / kiểm tra layout không cần máy in. */
+export async function renderReceiptPreviewPng(
+  data: InvoicePdfData
+): Promise<Buffer> {
+  return renderSvgToPng(receiptSvgForData(data)).png;
+}
+
+export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
+  const { png, width, height } = renderSvgToPng(receiptSvgForData(data));
+  const pageH = (height / width) * RECEIPT_PT_WIDTH;
 
   const doc = await PDFDocument.create();
   const page = doc.addPage([RECEIPT_PT_WIDTH, pageH]);

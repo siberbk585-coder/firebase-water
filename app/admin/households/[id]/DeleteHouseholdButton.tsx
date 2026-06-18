@@ -45,7 +45,10 @@ export function DeleteHouseholdButton({
   if (confirming) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-slate-500">Xóa {householdCode}?</span>
+        <span className="text-xs text-slate-500">
+          Xóa vĩnh viễn {householdCode}? Toàn bộ chỉ số/hóa đơn sẽ mất — dùng &quot;Ngưng sử dụng&quot; nếu chỉ
+          đóng hộ.
+        </span>
         <button
           type="button"
           onClick={handleDelete}

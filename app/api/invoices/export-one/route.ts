@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { UserRole } from "@/lib/types/enums";;
+import {
+  authorizeHouseholdAction,
+  requireStaffSession,
+  staffUnauthorized,
+} from "@/lib/staffAuth";
 import {
   ensureInvoiceForHouseholdPeriod,
   exportInvoicePdfLocal,
@@ -21,14 +24,15 @@ const schema = z.object({
 /** Xuất PDF một hộ (tự tạo hóa đơn nếu chưa có, lưu link n8n nếu bật). */
 export async function POST(request: Request) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== UserRole.ADMIN) {
-      return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
-    }
+    const session = await requireStaffSession();
+    if (!session) return staffUnauthorized();
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json({ error: "Dữ liệu không hợp lệ" }, { status: 400 });
     }
+
+    const denied = await authorizeHouseholdAction(session, parsed.data.householdId);
+    if (denied) return denied;
 
     const invoiceId = await ensureInvoiceForHouseholdPeriod(
       parsed.data.householdId,

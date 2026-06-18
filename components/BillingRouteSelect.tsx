@@ -9,11 +9,17 @@ export function BillingRouteSelect({
   routes,
   activeRouteId,
   isSummary,
+  basePath = "/admin/billing-sheet",
+  showAllOption = true,
+  showSummaryOption = true,
 }: {
   periodId: string;
   routes: Route[];
   activeRouteId: string | null;
   isSummary: boolean;
+  basePath?: string;
+  showAllOption?: boolean;
+  showSummaryOption?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,10 +36,16 @@ export function BillingRouteSelect({
     } else {
       p.set("route", value);
     }
-    router.push(`/admin/billing-sheet?${p.toString()}`);
+    router.push(`${basePath}?${p.toString()}`);
   }
 
-  const current = isSummary ? "summary" : activeRouteId === null ? "all" : activeRouteId;
+  const current = isSummary
+    ? "summary"
+    : activeRouteId === null
+      ? showAllOption
+        ? "all"
+        : routes[0]?.id ?? ""
+      : activeRouteId;
 
   return (
     <label className="billing-filter-control flex items-center gap-2 text-sm max-md:flex-col max-md:items-stretch max-md:gap-1">
@@ -45,13 +57,13 @@ export function BillingRouteSelect({
         value={current}
         onChange={(e) => go(e.target.value)}
       >
-        <option value="all">Tất cả hộ (bảng tổng)</option>
+        {showAllOption && <option value="all">Tất cả hộ (bảng tổng)</option>}
         {routes.map((r) => (
           <option key={r.id} value={r.id}>
             {r.name}
           </option>
         ))}
-        <option value="summary">Chỉ xem tổng theo khu vực</option>
+        {showSummaryOption && <option value="summary">Chỉ xem tổng theo khu vực</option>}
       </select>
     </label>
   );

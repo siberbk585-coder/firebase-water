@@ -22,7 +22,8 @@ export type SyncedInvoice = {
 /** Tạo/cập nhật hóa đơn + tổng tiền khi chỉ số đã chốt (CONFIRMED). */
 export async function syncInvoiceForConfirmedReading(
   householdId: string,
-  periodId: string
+  periodId: string,
+  opts?: { allowPaidUpdate?: boolean }
 ): Promise<SyncedInvoice | null> {
   const reading = await prisma.meterReading.findUnique({
     where: { householdId_periodId: { householdId, periodId } },
@@ -59,6 +60,41 @@ export async function syncInvoiceForConfirmedReading(
     existing?.status === InvoiceStatus.PAID ||
     existing?.status === InvoiceStatus.CANCELLED
   ) {
+    if (
+      opts?.allowPaidUpdate &&
+      existing.status === InvoiceStatus.PAID &&
+      reading.usageM3 != null
+    ) {
+      const amounts = calculateBillingAmounts(reading.usageM3, unitPrice, vatPercent);
+      const invoice = await prisma.$transaction(async (tx) => {
+        const updated = await tx.invoice.update({
+          where: { id: existing.id },
+          data: {
+            usageM3: reading.usageM3!,
+            unitPrice,
+            subtotalAmount: amounts.subtotal,
+            vatPercent: amounts.vatPercent,
+            vatAmount: amounts.vatAmount,
+            totalAmount: amounts.totalAmount,
+          },
+        });
+        await tx.payment.updateMany({
+          where: { invoiceId: existing.id },
+          data: { amount: amounts.totalAmount },
+        });
+        return updated;
+      });
+      return {
+        id: invoice.id,
+        usageM3: invoice.usageM3,
+        unitPrice: invoice.unitPrice,
+        subtotalAmount: invoice.subtotalAmount,
+        vatPercent: invoice.vatPercent,
+        vatAmount: invoice.vatAmount,
+        totalAmount: invoice.totalAmount,
+        status: invoice.status,
+      };
+    }
     return {
       id: existing.id,
       usageM3: existing.usageM3,

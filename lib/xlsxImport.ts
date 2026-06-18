@@ -62,9 +62,8 @@ function isDataSheet(name: string): boolean {
   return normalized !== "tong hop" && normalized !== "huong dan";
 }
 
-function meterCodeFallback(meterCode: string): number {
-  const base = parseInt(meterCode.replace(/\D/g, "").slice(-3) || "100", 10);
-  return 100 + (base % 50);
+function meterCodeFallback(_meterCode: string): number {
+  return 0;
 }
 
 function chunk<T>(items: T[], size: number): T[][] {

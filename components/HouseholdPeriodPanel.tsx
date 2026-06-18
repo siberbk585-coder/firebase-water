@@ -128,7 +128,8 @@ export function HouseholdPeriodPanel({
                 <Dd>{invoiceStatusLabel(invoice.status)}</Dd>
                 <Dt>Tiêu thụ / đơn giá</Dt>
                 <Dd>
-                  {invoice.usageM3} m³ × {invoice.unitPrice.toLocaleString("vi-VN")} đ
+                  {invoice.usageM3} m³ ×{" "}
+                  {invoice.unitPrice.toLocaleString("vi-VN")} đ/m³ (gồm VAT)
                 </Dd>
                 <Dt>Tổng tiền</Dt>
                 <Dd className="font-semibold text-[var(--primary-dark)]">

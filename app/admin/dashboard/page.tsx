@@ -66,6 +66,7 @@ export default async function AdminDashboardPage({
 
   const missingReadings = Math.max(0, progress.totalActive - progress.withReading);
   const remainingMoney = Math.max(0, invoiceTotalAmount - paidTotalAmount);
+  const billingSheetHref = `/admin/billing-sheet?period=${progress.period.id}&route=all`;
 
   return (
     <>
@@ -104,6 +105,7 @@ export default async function AdminDashboardPage({
           value={progress.pending}
           hint={missingReadings > 0 ? `${missingReadings} hộ chưa ghi` : "Đã ghi đủ hộ"}
           tone="yellow"
+          href={`${billingSheetHref}&status=pending`}
         />
         <MetricCard
           label="Hóa đơn"
@@ -116,6 +118,7 @@ export default async function AdminDashboardPage({
           value={formatCurrency(paidTotalAmount)}
           hint={`Còn ${formatCurrency(remainingMoney)}`}
           tone="pink"
+          href={`${billingSheetHref}&status=unpaid`}
         />
       </section>
 
@@ -242,11 +245,13 @@ function MetricCard({
   value,
   hint,
   tone,
+  href,
 }: {
   label: string;
   value: string | number;
   hint: string;
   tone: "mint" | "yellow" | "blue" | "pink";
+  href?: string;
 }) {
   const tones = {
     mint: "border-emerald-100 bg-emerald-50/60 text-[var(--primary-dark)]",
@@ -254,12 +259,31 @@ function MetricCard({
     blue: "border-sky-100 bg-sky-50/60 text-sky-700",
     pink: "border-rose-100 bg-rose-50/60 text-rose-700",
   };
+  const className = [
+    "card border",
+    tones[tone],
+    href ? "block transition hover:border-[var(--primary)]/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/25" : "",
+  ].join(" ");
 
-  return (
-    <div className={`card border ${tones[tone]}`}>
+  const content = (
+    <>
       <p className="text-sm font-semibold text-[var(--muted)]">{label}</p>
       <p className="mt-1 text-2xl font-bold">{value}</p>
       <p className="mt-1 text-xs text-[var(--muted)]">{hint}</p>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={className}>
+      {content}
     </div>
   );
 }

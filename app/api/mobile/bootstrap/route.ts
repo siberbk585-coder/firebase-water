@@ -1,21 +1,44 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { currentCalendarPeriod, getBillingPeriods, getCollectionRoutes } from "@/lib/billingSheet";
+import {
+  currentCalendarPeriod,
+  getBillingPeriods,
+  getCollectionRoutes,
+} from "@/lib/billingSheet";
+import {
+  filterRoutesForSession,
+  getCollectorRouteIds,
+  isAdmin,
+} from "@/lib/collectorAccess";
+import {
+  requireStaffSession,
+  staffUnauthorized,
+} from "@/lib/staffAuth";
 import { formatPeriod } from "@/lib/vi";
 import { getVatPercent } from "@/lib/vatServer";
-import { UserRole } from "@/lib/types/enums";
 
 export async function GET() {
-  const session = await getSession();
-  if (!session || session.role !== UserRole.ADMIN) {
-    return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
-  }
+  const session = await requireStaffSession();
+  if (!session) return staffUnauthorized();
 
-  const [periods, routes, vatPercent] = await Promise.all([
+  const [periods, allRoutes, vatPercent] = await Promise.all([
     getBillingPeriods(),
     getCollectionRoutes(),
     getVatPercent(),
   ]);
+
+  const allowedRouteIds = isAdmin(session)
+    ? undefined
+    : await getCollectorRouteIds(session.id);
+
+  const routes = isAdmin(session)
+    ? allRoutes
+    : filterRoutesForSession(session, allRoutes, allowedRouteIds ?? []);
+
+  const routeAccess = isAdmin(session)
+    ? "all"
+    : !allowedRouteIds?.length
+      ? "none"
+      : "assigned";
 
   const cal = currentCalendarPeriod();
   const openPeriod =
@@ -29,6 +52,7 @@ export async function GET() {
       name: session.name,
       phone: session.phone,
       role: session.role,
+      username: session.username ?? null,
     },
     periods: periods.map((p) => ({
       id: p.id,
@@ -44,6 +68,7 @@ export async function GET() {
       name: r.name,
       sortOrder: r.sortOrder,
     })),
+    routeAccess,
     receipt: {
       vatPercent,
       contactPhones:

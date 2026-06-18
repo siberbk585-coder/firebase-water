@@ -7,9 +7,10 @@ import {
   splitTimelineByPeriodStatus,
 } from "@/lib/householdPeriod";
 import { HouseholdPeriodPanel } from "@/components/HouseholdPeriodPanel";
-import { householdStatusLabel } from "@/lib/vi";
+import { householdInactiveFromLabel, householdStatusLabel } from "@/lib/vi";
 import { updateHouseholdPaymentMethod } from "../actions";
 import { DeleteHouseholdButton } from "./DeleteHouseholdButton";
+import { HouseholdStatusActions } from "./HouseholdStatusActions";
 import { PaymentMethod } from "@prisma/client";
 
 const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
@@ -52,6 +53,10 @@ export default async function HouseholdDetailPage({
   const { open: openPeriods, closed: closedPeriods } = splitTimelineByPeriodStatus(timeline);
   const stats = householdTimelineStats(timeline);
   const phone = household.contactPhone ?? household.user?.phone;
+  const inactiveFromLabel = householdInactiveFromLabel(
+    household.inactiveFromYear,
+    household.inactiveFromMonth
+  );
 
   return (
     <>
@@ -76,12 +81,29 @@ export default async function HouseholdDetailPage({
           <span className="badge bg-[var(--primary-soft)] text-[var(--primary-dark)]">
             Đồng hồ {household.meterCode}
           </span>
-          <span className="badge bg-slate-100 text-slate-700">
+          <span
+            className={[
+              "badge",
+              household.status === "ACTIVE"
+                ? "bg-emerald-50 text-emerald-800"
+                : "bg-amber-50 text-amber-900",
+            ].join(" ")}
+          >
             {householdStatusLabel(household.status)}
           </span>
+          {inactiveFromLabel && (
+            <span className="badge bg-amber-50 text-amber-900">{inactiveFromLabel}</span>
+          )}
           {household.collectionRoute && (
             <span className="badge bg-slate-100 text-slate-700">{household.collectionRoute.name}</span>
           )}
+          <HouseholdStatusActions
+            householdId={household.id}
+            householdCode={household.householdCode}
+            residentName={household.residentName}
+            status={household.status}
+            inactiveFromLabel={inactiveFromLabel}
+          />
           <DeleteHouseholdButton
             householdId={household.id}
             householdCode={household.householdCode}
@@ -132,6 +154,14 @@ export default async function HouseholdDetailPage({
           <InfoItem
             label="Ngày tạo hồ sơ"
             value={household.createdAt.toLocaleDateString("vi-VN")}
+          />
+          <InfoItem
+            label="Trạng thái sử dụng"
+            value={
+              inactiveFromLabel
+                ? `${householdStatusLabel(household.status)} — ${inactiveFromLabel}`
+                : householdStatusLabel(household.status)
+            }
           />
           <InfoItem label="Ghi chú" value={household.note?.trim() || "—"} className="sm:col-span-2" />
           <div>

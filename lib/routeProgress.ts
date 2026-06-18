@@ -5,6 +5,7 @@ import {
   getBillingPeriods,
   getCollectionRoutes,
 } from "./billingSheet";
+import { householdBillableWhere } from "./householdBillable";
 
 type RouteCountRow = { collectionRouteId: string; count: bigint };
 
@@ -35,11 +36,12 @@ export async function getCurrentPeriodProgress(periodId?: string) {
   const routes = await getCollectionRoutes();
 
   // Tuần tự — tránh mở nhiều kết nối cùng lúc (pool max: 1 trên App Hosting)
-  const totalActive = await prisma.household.count({ where: { status: "ACTIVE" } });
+  const billableWhere = householdBillableWhere(current.year, current.month);
+  const totalActive = await prisma.household.count({ where: billableWhere });
   const withReading = await prisma.meterReading.count({
     where: {
       periodId: current.id,
-      household: { status: "ACTIVE" },
+      household: billableWhere,
       status: { in: [ReadingStatus.PENDING, ReadingStatus.CONFIRMED] },
       OR: [{ confirmedValue: { not: null } }, { ocrValue: { not: null } }],
     },
@@ -49,7 +51,7 @@ export async function getCurrentPeriodProgress(periodId?: string) {
   });
   const householdByRoute = await prisma.household.groupBy({
     by: ["collectionRouteId"],
-    where: { status: "ACTIVE", collectionRouteId: { not: null } },
+    where: { ...billableWhere, collectionRouteId: { not: null } },
     _count: { _all: true },
   });
   const recordedByRoute = await prisma.$queryRaw<RouteCountRow[]>`
@@ -57,10 +59,21 @@ export async function getCurrentPeriodProgress(periodId?: string) {
     FROM meter_reading mr
     INNER JOIN household h ON h.id = mr.household_id
     WHERE mr.period_id = ${current.id}::uuid
-      AND h.status = 'ACTIVE'::household_status
       AND h.collection_route_id IS NOT NULL
       AND mr.confirmed_value IS NOT NULL
       AND mr.status IN ('PENDING'::reading_status, 'CONFIRMED'::reading_status)
+      AND (
+        h.status = 'ACTIVE'::household_status
+        OR (
+          h.status = 'INACTIVE'::household_status
+          AND h.inactive_from_year IS NOT NULL
+          AND h.inactive_from_month IS NOT NULL
+          AND (
+            h.inactive_from_year > ${current.year}
+            OR (h.inactive_from_year = ${current.year} AND h.inactive_from_month >= ${current.month})
+          )
+        )
+      )
     GROUP BY h.collection_route_id
   `;
 

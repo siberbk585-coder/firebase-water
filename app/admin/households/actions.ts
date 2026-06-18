@@ -2,10 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { Prisma, PaymentMethod, UserRole, InvoiceStatus } from "@prisma/client";
+import { Prisma, PaymentMethod, UserRole, InvoiceStatus, HouseholdStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { enrollHouseholdInOpenPeriods } from "@/lib/billingPeriods";
+import {
+  currentCalendarPeriod,
+  enrollHouseholdInOpenPeriods,
+} from "@/lib/billingPeriods";
+import { formatPeriod } from "@/lib/vi";
 import { requireAdmin } from "@/lib/guards";
 import { logAudit } from "@/lib/audit";
 
@@ -106,6 +110,9 @@ export async function createHousehold(formData: FormData): Promise<void> {
         collectionRouteId,
         routeSortOrder: nextSortOrder,
         userId,
+        status: HouseholdStatus.ACTIVE,
+        inactiveFromYear: null,
+        inactiveFromMonth: null,
       },
     });
 
@@ -158,6 +165,105 @@ export async function updateHouseholdPaymentMethod(
   });
   revalidatePath(`/admin/households/${householdId}`);
   revalidatePath("/admin/payments");
+}
+
+export async function deactivateHousehold(
+  householdId: string
+): Promise<{ error: string } | void> {
+  const admin = await requireAdmin();
+
+  const household = await prisma.household.findUniqueOrThrow({
+    where: { id: householdId },
+    select: {
+      householdCode: true,
+      meterCode: true,
+      residentName: true,
+      status: true,
+    },
+  });
+
+  if (household.status === HouseholdStatus.INACTIVE) {
+    return { error: "Hộ đã ngưng sử dụng." };
+  }
+
+  const { year, month } = currentCalendarPeriod();
+
+  await prisma.household.update({
+    where: { id: householdId },
+    data: {
+      status: HouseholdStatus.INACTIVE,
+      inactiveFromYear: year,
+      inactiveFromMonth: month,
+    },
+  });
+
+  await logAudit({
+    actorId: admin.id,
+    action: "HOUSEHOLD_DEACTIVATED",
+    entity: "Household",
+    entityId: householdId,
+    metadata: {
+      tenHo: household.residentName,
+      maHo: household.householdCode,
+      mkh: household.meterCode,
+      kyCuoi: formatPeriod(month, year),
+    },
+  });
+
+  revalidatePath(`/admin/households/${householdId}`);
+  revalidatePath("/admin/households");
+  revalidatePath("/admin/billing-sheet");
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/routes");
+}
+
+export async function reactivateHousehold(
+  householdId: string
+): Promise<{ error: string } | void> {
+  const admin = await requireAdmin();
+
+  const household = await prisma.household.findUniqueOrThrow({
+    where: { id: householdId },
+    select: {
+      householdCode: true,
+      meterCode: true,
+      residentName: true,
+      status: true,
+    },
+  });
+
+  if (household.status === HouseholdStatus.ACTIVE) {
+    return { error: "Hộ đang sử dụng bình thường." };
+  }
+
+  await prisma.household.update({
+    where: { id: householdId },
+    data: {
+      status: HouseholdStatus.ACTIVE,
+      inactiveFromYear: null,
+      inactiveFromMonth: null,
+    },
+  });
+
+  await enrollHouseholdInOpenPeriods(householdId);
+
+  await logAudit({
+    actorId: admin.id,
+    action: "HOUSEHOLD_REACTIVATED",
+    entity: "Household",
+    entityId: householdId,
+    metadata: {
+      tenHo: household.residentName,
+      maHo: household.householdCode,
+      mkh: household.meterCode,
+    },
+  });
+
+  revalidatePath(`/admin/households/${householdId}`);
+  revalidatePath("/admin/households");
+  revalidatePath("/admin/billing-sheet");
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/routes");
 }
 
 export async function deleteHousehold(

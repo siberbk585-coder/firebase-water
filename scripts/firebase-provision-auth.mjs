@@ -41,10 +41,20 @@ function accountToEmail(account) {
   return `${t}@${DOMAIN}`;
 }
 
+function loginAccount(user) {
+  return user.username || user.phone;
+}
+
+function claimRoleFor(user) {
+  if (user.role === UserRole.ADMIN) return "ADMIN";
+  if (user.role === UserRole.COLLECTOR) return "COLLECTOR";
+  return "RESIDENT";
+}
+
 async function syncUser(user, password) {
   const auth = getAuth();
-  const email = accountToEmail(user.phone);
-  const claimRole = user.role === UserRole.ADMIN ? "ADMIN" : "RESIDENT";
+  const email = accountToEmail(loginAccount(user));
+  const claimRole = claimRoleFor(user);
   const pwd = password || process.env.PROVISION_DEFAULT_PASSWORD || "123456";
 
   let uid;
@@ -68,7 +78,7 @@ async function syncUser(user, password) {
     where: { id: user.id },
     data: { firebaseUid: uid },
   });
-  console.log(`✓ ${user.phone} (${user.role}) → ${email}`);
+  console.log(`✓ ${loginAccount(user)} (${user.role}) → ${email}`);
 }
 
 async function main() {
@@ -84,9 +94,13 @@ async function main() {
   }
 
   if (account) {
-    const user = await prisma.user.findUnique({ where: { phone: account } });
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ phone: account }, { username: account }],
+      },
+    });
     if (!user) {
-      console.error(`Không tìm thấy user phone=${account}`);
+      console.error(`Không tìm thấy user account=${account}`);
       process.exit(1);
     }
     await syncUser(user, password);

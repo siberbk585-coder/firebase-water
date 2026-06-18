@@ -1,6 +1,6 @@
 # Firebase project `tiennuoc` — hướng dẫn vận hành
 
-> **Mở lại nhanh:** xem [`HANDOFF.md`](./HANDOFF.md) (URL production, tài khoản demo, checklist deploy, sự cố).
+> **Mở lại nhanh:** xem [`HANDOFF.md`](./HANDOFF.md) (URL production, checklist deploy, sự cố).
 
 ## Kiến trúc
 

@@ -1,6 +1,6 @@
 import { HouseholdStatus, PeriodStatus, ReadingStatus } from "@/lib/types/enums";
 import { prisma } from "./db";
-import { getOldReading } from "./readings";
+import { DEFAULT_OLD_READING_NO_PRIOR, getOldReading } from "./readings";
 
 const OPERATING_TZ = "Asia/Ho_Chi_Minh";
 
@@ -14,11 +14,6 @@ export function currentCalendarPeriod(now = new Date()): { year: number; month: 
   const year = Number(parts.find((p) => p.type === "year")?.value);
   const month = Number(parts.find((p) => p.type === "month")?.value);
   return { year, month };
-}
-
-function fallbackOldReadingFromMeterCode(meterCode: string): number {
-  const base = parseInt(meterCode.replace(/\D/g, "").slice(-3) || "100", 10);
-  return 100 + (base % 50);
 }
 
 /** Tạo kỳ tháng hiện tại (OPEN) nếu chưa có; không đổi trạng thái kỳ đã CLOSED. */
@@ -105,7 +100,7 @@ export async function ensureActiveHouseholdsInPeriod(periodId: string): Promise<
     data: missing.map((h) => ({
       householdId: h.id,
       periodId: period.id,
-      oldReading: cscByHousehold.get(h.id) ?? fallbackOldReadingFromMeterCode(h.meterCode),
+      oldReading: cscByHousehold.get(h.id) ?? DEFAULT_OLD_READING_NO_PRIOR,
       status: ReadingStatus.PENDING,
       anomalyFlags: "[]",
     })),
@@ -115,7 +110,9 @@ export async function ensureActiveHouseholdsInPeriod(periodId: string): Promise<
   return missing.length;
 }
 
-/** Gắn một hộ vào mọi kỳ đang OPEN (khi tạo hộ mới hoặc kích hoạt lại). */
+/**
+ * Gắn hộ mới vào kỳ thu đang mở của tháng hiện tại (không gắn các kỳ OPEN cũ — vd. T5 đã import).
+ */
 export async function enrollHouseholdInOpenPeriods(householdId: string): Promise<void> {
   const household = await prisma.household.findUnique({
     where: { id: householdId },
@@ -123,30 +120,35 @@ export async function enrollHouseholdInOpenPeriods(householdId: string): Promise
   });
   if (!household || household.status !== HouseholdStatus.ACTIVE) return;
 
-  const openPeriods = await prisma.billingPeriod.findMany({
-    where: { status: PeriodStatus.OPEN },
-    select: { id: true },
-    orderBy: [{ year: "desc" }, { month: "desc" }],
-  });
-
-  for (const period of openPeriods) {
-    const exists = await prisma.meterReading.findUnique({
-      where: {
-        householdId_periodId: { householdId, periodId: period.id },
-      },
+  const { year, month } = currentCalendarPeriod();
+  const period =
+    (await prisma.billingPeriod.findFirst({
+      where: { status: PeriodStatus.OPEN, year, month },
       select: { id: true },
-    });
-    if (exists) continue;
+    })) ??
+    (await prisma.billingPeriod.findFirst({
+      where: { status: PeriodStatus.OPEN },
+      orderBy: [{ year: "desc" }, { month: "desc" }],
+      select: { id: true },
+    }));
+  if (!period) return;
 
-    const oldReading = await getOldReading(householdId, period.id);
-    await prisma.meterReading.create({
-      data: {
-        householdId,
-        periodId: period.id,
-        oldReading,
-        status: ReadingStatus.PENDING,
-        anomalyFlags: "[]",
-      },
-    });
-  }
+  const exists = await prisma.meterReading.findUnique({
+    where: {
+      householdId_periodId: { householdId, periodId: period.id },
+    },
+    select: { id: true },
+  });
+  if (exists) return;
+
+  const oldReading = await getOldReading(householdId, period.id);
+  await prisma.meterReading.create({
+    data: {
+      householdId,
+      periodId: period.id,
+      oldReading,
+      status: ReadingStatus.PENDING,
+      anomalyFlags: "[]",
+    },
+  });
 }

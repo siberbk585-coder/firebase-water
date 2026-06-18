@@ -1,7 +1,7 @@
 import { InvoiceStatus, ReadingStatus } from "@/lib/types/enums";;
 import { prisma } from "./db";
 import { calculateUsage } from "./billing";
-import { resolveOldReadingForRow } from "./readings";
+import { DEFAULT_OLD_READING_NO_PRIOR, resolveOldReadingForRow } from "./readings";
 import {
   calculateBillingAmounts,
   invoiceNeedsVatBackfill,
@@ -13,6 +13,7 @@ import {
   ensureActiveHouseholdsInPeriod,
   ensureCurrentBillingPeriod,
 } from "./billingPeriods";
+import { householdBillableWhere } from "./householdBillable";
 import { unitPriceForHousehold } from "./routePricing";
 
 export { currentCalendarPeriod, ensureCurrentBillingPeriod };
@@ -69,18 +70,37 @@ export async function getCollectionRoutes() {
   });
 }
 
+function routeScopeWhere(
+  routeId: string | null,
+  allowedRouteIds?: string[]
+): { collectionRouteId?: string | { in: string[] } } {
+  if (routeId) {
+    if (allowedRouteIds?.length && !allowedRouteIds.includes(routeId)) {
+      return { collectionRouteId: "__denied__" };
+    }
+    return { collectionRouteId: routeId };
+  }
+  if (allowedRouteIds?.length) {
+    return { collectionRouteId: { in: allowedRouteIds } };
+  }
+  return {};
+}
+
 export async function loadBillingSheetRows(
   periodId: string,
-  routeId: string | null
+  routeId: string | null,
+  options?: { allowedRouteIds?: string[] }
 ): Promise<BillingSheetRow[]> {
   const period = await prisma.billingPeriod.findUniqueOrThrow({ where: { id: periodId } });
   await ensureActiveHouseholdsInPeriod(periodId);
   const vatPercent = await getVatPercent();
+  const routeScope = routeScopeWhere(routeId, options?.allowedRouteIds);
+  if (routeScope.collectionRouteId === "__denied__") return [];
 
   const households = await prisma.household.findMany({
     where: {
-      status: "ACTIVE",
-      ...(routeId ? { collectionRouteId: routeId } : {}),
+      ...householdBillableWhere(period.year, period.month),
+      ...routeScope,
     },
     include: {
       priceGroup: true,
@@ -141,7 +161,7 @@ export async function loadBillingSheetRows(
     const invoice = h.invoices[0] ?? null;
     const chainOldReading =
       priorReadingByHousehold.get(h.id) ??
-      fallbackOldReadingFromMeterCode(h.meterCode);
+      DEFAULT_OLD_READING_NO_PRIOR;
     const oldReading = resolveOldReadingForRow(reading, chainOldReading);
 
     if (
@@ -159,18 +179,22 @@ export async function loadBillingSheetRows(
       csm != null ? calculateUsage(csm, oldReading) : reading?.usageM3 ?? null;
     const unitPrice = unitPriceForHousehold(h);
     let amounts: ReturnType<typeof calculateBillingAmounts> | null = null;
+    const invoiceLocked =
+      invoice?.status === InvoiceStatus.PAID ||
+      invoice?.status === InvoiceStatus.CANCELLED;
     if (invoice?.subtotalAmount != null) {
-      amounts = resolveInvoiceAmounts(
-        {
-          usageM3: invoice.usageM3,
-          unitPrice: invoice.unitPrice,
-          subtotalAmount: invoice.subtotalAmount,
-          vatPercent: invoice.vatPercent,
-          vatAmount: invoice.vatAmount,
-          totalAmount: invoice.totalAmount,
-        },
-        vatPercent
-      );
+      const inv = {
+        usageM3: invoice.usageM3,
+        unitPrice: invoice.unitPrice,
+        subtotalAmount: invoice.subtotalAmount,
+        vatPercent: invoice.vatPercent,
+        vatAmount: invoice.vatAmount,
+        totalAmount: invoice.totalAmount,
+      };
+      // Đã thu / hủy: giữ đúng số đã ghi — không áp VAT cài đặt mới khi chỉ xem bảng thu.
+      amounts = invoiceLocked
+        ? resolveInvoiceAmounts(inv)
+        : resolveInvoiceAmounts(inv, vatPercent);
     } else if (usageM3 != null && usageM3 > 0) {
       amounts = calculateBillingAmounts(usageM3, unitPrice, vatPercent);
     } else if (usageM3 === 0) {
@@ -238,11 +262,6 @@ export async function loadBillingSheetRows(
   return rows;
 }
 
-function fallbackOldReadingFromMeterCode(meterCode: string): number {
-  const base = parseInt(meterCode.replace(/\D/g, "").slice(-3) || "100", 10);
-  return 100 + (base % 50);
-}
-
 export async function loadRouteSummaries(periodId: string): Promise<RouteSummary[]> {
   const routes = await getCollectionRoutes();
   const summaries: RouteSummary[] = [];
@@ -275,13 +294,19 @@ export async function loadRouteSummaries(periodId: string): Promise<RouteSummary
     });
   }
 
-  const noRoute = await prisma.household.count({
-    where: { status: "ACTIVE", collectionRouteId: null },
+  const period = await prisma.billingPeriod.findUniqueOrThrow({
+    where: { id: periodId },
+    select: { year: true, month: true },
   });
+  const billableNoRoute = {
+    ...householdBillableWhere(period.year, period.month),
+    collectionRouteId: null,
+  };
+  const noRoute = await prisma.household.count({ where: billableNoRoute });
   if (noRoute > 0) {
     const vatPercent = await getVatPercent();
     const rows = await prisma.household.findMany({
-      where: { status: "ACTIVE", collectionRouteId: null },
+      where: billableNoRoute,
       include: {
         readings: { where: { periodId }, take: 1 },
         priceGroup: true,

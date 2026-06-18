@@ -6,7 +6,7 @@ const SETTINGS_ID = "default";
 export async function getSystemSettings() {
   return prisma.systemSettings.upsert({
     where: { id: SETTINGS_ID },
-    create: { id: SETTINGS_ID, vatPercent: 10 },
+    create: { id: SETTINGS_ID, vatPercent: 5 },
     update: {},
   });
 }
@@ -29,7 +29,7 @@ export async function updateSystemSettings(data: {
       id: SETTINGS_ID,
       periodCloseDay: day ?? 25,
       timezone: data.timezone ?? "Asia/Ho_Chi_Minh",
-      vatPercent: data.vatPercent ?? 10,
+      vatPercent: data.vatPercent ?? 5,
     },
     update: {
       ...(day != null ? { periodCloseDay: day } : {}),
