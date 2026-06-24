@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AuditDetailList } from "@/components/AuditDetailList";
 import { prisma } from "@/lib/db";
 import { enrichAuditLogRows } from "@/lib/auditEnrich";
+import { mergeAuditActionCounts } from "@/lib/auditQuery";
 import { formatDateTimeVN } from "@/lib/datetime";
 import {
   auditActionLabel,
@@ -77,7 +78,7 @@ export default async function AuditLogPage({
         >
           Tất cả
         </Link>
-        {actionGroups.map((g) => (
+        {mergeAuditActionCounts(actionGroups).map((g) => (
           <Link
             key={g.action}
             href={pageHref(1, g.action)}
@@ -88,7 +89,7 @@ export default async function AuditLogPage({
             }`}
           >
             {auditActionLabel(g.action)}{" "}
-            <span className="text-xs opacity-70">({g._count.action})</span>
+            <span className="text-xs opacity-70">({g.count})</span>
           </Link>
         ))}
       </div>

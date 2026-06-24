@@ -1,7 +1,8 @@
 import { ReadingStatus, InvoiceStatus } from "@/lib/types/enums";
-import { prisma } from "./db";
+import { prisma } from "@/lib/db";
 import { getCurrentPeriodProgress } from "./routeProgress";
 import { formatPeriod } from "./vi";
+import { excludeSandboxHouseholdWhere } from "./sandboxRoutes";
 
 type UsagePeriod = {
   id: string;
@@ -90,6 +91,7 @@ async function loadRouteLeakAlerts({
       periodId: { in: [currentPeriodId, previousPeriodId] },
       status: ReadingStatus.CONFIRMED,
       usageM3: { not: null },
+      household: excludeSandboxHouseholdWhere(),
     },
     select: {
       periodId: true,
@@ -285,15 +287,26 @@ export async function getAdminDashboard(periodId?: string) {
   const { period, allPeriods, totalActive, withReading, pending, percent, routeProgress } =
     progress;
 
-  const [invoiceByStatus, missingPdf] = await Promise.all([
+  const [invoiceByStatus, missingPdf, confirmedCount] = await Promise.all([
     prisma.invoice.groupBy({
       by: ["status"],
-      where: { periodId: period.id },
+      where: { periodId: period.id, household: excludeSandboxHouseholdWhere() },
       _count: { _all: true },
       _sum: { totalAmount: true },
     }),
     prisma.invoice.count({
-      where: { periodId: period.id, pdfPath: null },
+      where: {
+        periodId: period.id,
+        pdfPath: null,
+        household: excludeSandboxHouseholdWhere(),
+      },
+    }),
+    prisma.meterReading.count({
+      where: {
+        periodId: period.id,
+        status: ReadingStatus.CONFIRMED,
+        household: excludeSandboxHouseholdWhere(),
+      },
     }),
   ]);
 
@@ -302,11 +315,10 @@ export async function getAdminDashboard(periodId?: string) {
     invoiceByStatus.find((r) => r.status === InvoiceStatus.PAID)?._count._all ?? 0;
   const paidAmount =
     invoiceByStatus.find((r) => r.status === InvoiceStatus.PAID)?._sum.totalAmount ?? 0;
-  const invoiceTotalAmount = invoiceByStatus.reduce(
-    (sum, r) => sum + (r._sum.totalAmount ?? 0),
-    0
-  );
-  const unpaidAmount = Math.max(0, invoiceTotalAmount - paidAmount);
+  const unpaidAmount =
+    invoiceByStatus.find((r) => r.status === InvoiceStatus.ISSUED)?._sum.totalAmount ?? 0;
+  const unpaidInvoices =
+    invoiceByStatus.find((r) => r.status === InvoiceStatus.ISSUED)?._count._all ?? 0;
   const missingReadings = Math.max(0, totalActive - withReading);
 
   const waterUsage = await loadMonthlyWaterUsage(period, allPeriods);
@@ -338,15 +350,20 @@ export async function getAdminDashboard(periodId?: string) {
         total: r.total,
         recorded: r.recorded,
         missing: r.missing,
+        invoicedAmount: r.invoicedAmount,
+        paidAmount: r.paidAmount,
+        unpaidAmount: r.unpaidAmount,
         percent: r.total > 0 ? Math.round((r.recorded / r.total) * 100) : 0,
       })),
     },
     invoices: {
       total: invoiceCount,
       paid: paidInvoices,
+      unpaid: unpaidInvoices,
       missingPdf,
       paidAmount,
       unpaidAmount,
+      confirmedCount,
     },
     waterUsage,
   };

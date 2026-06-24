@@ -5,6 +5,10 @@ import { ensureFirebaseUser } from "@/lib/firebaseAuth";
 import { logAudit } from "@/lib/audit";
 import { UserRole } from "@/lib/types/enums";
 import type { SessionUser } from "@/lib/auth";
+import {
+  excludeSandboxCollectorsWhere,
+  excludeSandboxRoutesWhere,
+} from "@/lib/sandboxRoutes";
 
 export class MobileAdminError extends Error {
   constructor(
@@ -22,7 +26,7 @@ function normalizeUsername(raw: string): string {
 
 export async function listCollectorsForMobile() {
   const collectors = await prisma.user.findMany({
-    where: { role: UserRole.COLLECTOR },
+    where: { role: UserRole.COLLECTOR, ...excludeSandboxCollectorsWhere() },
     orderBy: [{ isActive: "desc" }, { name: "asc" }],
     include: {
       collectorRoutes: {
@@ -56,6 +60,7 @@ export async function getCollectorForMobile(id: string) {
   }
 
   const routes = await prisma.collectionRoute.findMany({
+    where: excludeSandboxRoutesWhere(),
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: { id: true, name: true, code: true },
   });

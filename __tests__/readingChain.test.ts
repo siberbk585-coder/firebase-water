@@ -22,3 +22,13 @@ test("resolveOldReadingForRow: đã chốt giữ CSC đã lưu lúc chốt", () 
     145
   );
 });
+
+test("resolveOldReadingForRow: CSC thủ công giữ giá trị dù chưa chốt", () => {
+  assert.equal(
+    resolveOldReadingForRow(
+      { status: ReadingStatus.PENDING, oldReading: 0, cscManual: true },
+      160
+    ),
+    0
+  );
+});

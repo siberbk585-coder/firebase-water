@@ -2,6 +2,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/data/prisma";
 import { UserRole } from "@/lib/types/enums";
 import { userRoleLabel } from "@/lib/vi";
+import {
+  excludeSandboxCollectorsWhere,
+  excludeSandboxRoutesWhere,
+} from "@/lib/sandboxRoutes";
 import { AddCollectorModal } from "./AddCollectorModal";
 
 export default async function AdminCollectorsPage({
@@ -13,7 +17,7 @@ export default async function AdminCollectorsPage({
 
   const [collectors, routes] = await Promise.all([
     prisma.user.findMany({
-      where: { role: UserRole.COLLECTOR },
+      where: { role: UserRole.COLLECTOR, ...excludeSandboxCollectorsWhere() },
       orderBy: [{ isActive: "desc" }, { name: "asc" }],
       include: {
         collectorRoutes: {
@@ -22,6 +26,7 @@ export default async function AdminCollectorsPage({
       },
     }),
     prisma.collectionRoute.findMany({
+      where: excludeSandboxRoutesWhere(),
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true },
     }),

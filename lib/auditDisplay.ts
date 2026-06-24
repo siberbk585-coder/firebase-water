@@ -16,6 +16,7 @@ const META_LABELS: Record<string, string> = {
   tenHo: "Tên hộ",
   ky: "Kỳ",
   csc: "CSC",
+  cscTruoc: "CSC trước",
   csm: "CSM",
   tieuThu: "Tiêu thụ",
   coAnh: "Ảnh",
@@ -75,7 +76,7 @@ function formatMetaValue(key: string, v: unknown): string {
   }
   if (
     typeof v === "number" &&
-    (key === "csc" || key === "csm" || key === "tieuThu")
+    (key === "csc" || key === "csm" || key === "cscTruoc" || key === "tieuThu")
   ) {
     const n = Number.isInteger(v) ? String(v) : v.toFixed(1);
     return M3_SUFFIX_KEYS.has(key) ? `${n} m³` : n;
@@ -116,6 +117,7 @@ export function metadataToDetailLines(
     "householdCode",
     "meterCode",
     "csc",
+    "cscTruoc",
     "csm",
     "tieuThu",
     "soTien",

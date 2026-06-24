@@ -8,10 +8,12 @@ import {
 import type { SessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { MobileAdminError } from "@/lib/mobileAdminCollectors";
+import { excludeSandboxRoutesWhere } from "@/lib/sandboxRoutes";
 
 export async function getPricingForMobile() {
   const [routes, settings] = await Promise.all([
     prisma.collectionRoute.findMany({
+      where: excludeSandboxRoutesWhere(),
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: { _count: { select: { households: true } } },
     }),
@@ -69,7 +71,10 @@ export async function saveRoutePricesForMobile(
     throw new MobileAdminError("Không có giá để lưu.");
   }
 
-  const routeIds = await prisma.collectionRoute.findMany({ select: { id: true } });
+  const routeIds = await prisma.collectionRoute.findMany({
+    where: excludeSandboxRoutesWhere(),
+    select: { id: true },
+  });
   const valid = new Set(routeIds.map((r) => r.id));
 
   for (const row of prices) {

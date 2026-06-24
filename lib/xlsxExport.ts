@@ -1,7 +1,7 @@
 import type { InputMethod, ReadingStatus } from "@/lib/types/enums";
 import * as XLSX from "xlsx-js-style";
 import { parseAnomalyFlags } from "./anomaly";
-import { loadBillingSheetRows } from "./billingSheet";
+import { loadBillingSheetRows, getCollectionRoutes } from "./billingSheet";
 import { prisma } from "./db";
 import { formatDateTimeVN } from "./datetime";
 import {
@@ -288,9 +288,7 @@ function setFormula(
 /** Workbook giống Excel vận hành: mỗi tuyến một sheet + TỔNG HỢP. */
 export async function buildPeriodRouteWorkbook(periodId: string): Promise<XLSX.WorkBook> {
   const period = await prisma.billingPeriod.findUniqueOrThrow({ where: { id: periodId } });
-  const routes = await prisma.collectionRoute.findMany({
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-  });
+  const routes = await getCollectionRoutes();
   const wb = XLSX.utils.book_new();
   const periodTitle = `${period.month}/${period.year}`;
   const editableHeaders = [

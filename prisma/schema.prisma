@@ -165,6 +165,7 @@ model MeterReading {
   periodId        String        @map("period_id") @db.Uuid
   period          BillingPeriod @relation(fields: [periodId], references: [id])
   oldReading      Float         @map("old_reading")
+  cscManual       Boolean       @default(false) @map("csc_manual")
   ocrValue        Float?        @map("ocr_value")
   confirmedValue  Float?        @map("confirmed_value")
   confidence      Float?

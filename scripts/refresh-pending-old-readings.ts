@@ -16,6 +16,7 @@ async function main() {
     const pending = await prisma.meterReading.findMany({
       where: {
         status: { in: [ReadingStatus.PENDING, ReadingStatus.REJECTED] },
+        cscManual: false,
       },
       select: { id: true, householdId: true, periodId: true, oldReading: true },
     });

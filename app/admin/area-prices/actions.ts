@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/guards";
 import { updateSystemSettings } from "@/lib/settings";
 import { normalizeVatPercent } from "@/lib/vat";
+import { excludeSandboxRoutesWhere } from "@/lib/sandboxRoutes";
 
 export async function saveVatSettings(formData: FormData): Promise<void> {
   await requireAdmin();
@@ -22,7 +23,10 @@ export async function saveVatSettings(formData: FormData): Promise<void> {
 export async function saveRoutePrices(formData: FormData): Promise<void> {
   await requireAdmin();
 
-  const routes = await prisma.collectionRoute.findMany({ select: { id: true } });
+  const routes = await prisma.collectionRoute.findMany({
+    where: excludeSandboxRoutesWhere(),
+    select: { id: true },
+  });
   for (const route of routes) {
     const raw = String(formData.get(`price_${route.id}`) ?? "").trim();
     if (!raw) continue;

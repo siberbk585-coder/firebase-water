@@ -104,6 +104,7 @@ export function auditActionLabel(action: string): string {
     READING_CONFIRMED: "Chốt chỉ số",
     READING_SUBMITTED: "Hộ gửi chỉ số",
     READING_REJECTED: "Từ chối chỉ số",
+    READING_CSC_ADJUSTED: "Sửa chỉ số cũ (CSC)",
     INVOICES_GENERATED: "Chốt hóa đơn kỳ",
     INVOICE_EXPORT_LOCAL: "Xuất PDF hóa đơn",
     INVOICE_SEND_BANK_TRANSFER: "Gửi QR chuyển khoản",

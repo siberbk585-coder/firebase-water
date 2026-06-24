@@ -23,6 +23,7 @@ npm-debug.log*
 .env.*.local
 .cloudsql-app-pass
 .tiennuoc-db-pass
+scripts/data/guest-testers-credentials.txt
 *.traineddata
 !.env.example
 

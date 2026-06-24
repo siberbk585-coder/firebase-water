@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import {
+  excludeSandboxHouseholdWhere,
+  excludeSandboxRoutesWhere,
+} from "@/lib/sandboxRoutes";
 import { AssignHouseholdForm } from "@/components/AssignHouseholdForm";
 import { createRoute, updateRoute, assignHouseholdToRoute } from "./actions";
 
@@ -12,11 +16,12 @@ export default async function AdminRoutesPage({
 
   const [routes, households] = await Promise.all([
     prisma.collectionRoute.findMany({
+      where: excludeSandboxRoutesWhere(),
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: { _count: { select: { households: true } } },
     }),
     prisma.household.findMany({
-      where: { status: "ACTIVE" },
+      where: { status: "ACTIVE", ...excludeSandboxHouseholdWhere() },
       orderBy: [{ collectionRouteId: "asc" }, { routeSortOrder: "asc" }, { householdCode: "asc" }],
       include: { collectionRoute: true },
     }),

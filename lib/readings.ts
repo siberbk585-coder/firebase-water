@@ -41,12 +41,13 @@ export async function getAvgUsage3Months(
   return usages.reduce((a, b) => a + b, 0) / usages.length;
 }
 
-/** CSC hiển thị / tính tiền: kỳ đã chốt giữ CSC đã lưu; kỳ chưa chốt lấy CSM kỳ CONFIRMED gần nhất trước đó. */
+/** CSC hiển thị / tính tiền: đã chốt hoặc CSC thủ công giữ giá trị đã lưu; còn lại lấy chuỗi kỳ trước. */
 export function resolveOldReadingForRow(
-  reading: { status: ReadingStatus; oldReading: number } | null,
+  reading: { status: ReadingStatus; oldReading: number; cscManual?: boolean } | null,
   chainOldReading: number
 ): number {
-  if (reading?.status === ReadingStatus.CONFIRMED) {
+  if (!reading) return chainOldReading;
+  if (reading.cscManual || reading.status === ReadingStatus.CONFIRMED) {
     return reading.oldReading;
   }
   return chainOldReading;
@@ -113,7 +114,9 @@ export async function confirmReading(params: {
 
   await assertPriorPeriodReadingConfirmed(reading.householdId, reading.period);
 
-  const oldReading = await getOldReading(reading.householdId, reading.periodId);
+  const oldReading = reading.cscManual
+    ? reading.oldReading
+    : await getOldReading(reading.householdId, reading.periodId);
 
   const avg = await getAvgUsage3Months(reading.householdId, reading.periodId);
   const anomaly = detectAnomalies({
@@ -405,8 +408,6 @@ export async function adminUpsertReading(params: {
     }),
   ]);
 
-  const oldReading = await getOldReading(params.householdId, params.periodId);
-
   const existing = await prisma.meterReading.findUnique({
     where: {
       householdId_periodId: {
@@ -415,6 +416,11 @@ export async function adminUpsertReading(params: {
       },
     },
   });
+
+  const oldReading =
+    existing?.cscManual === true
+      ? existing.oldReading
+      : await getOldReading(params.householdId, params.periodId);
 
   const draft = existing
     ? await prisma.meterReading.update({
@@ -451,6 +457,105 @@ export async function adminUpsertReading(params: {
     metadata: meterReadingAuditMetadata(reading, household, {
       ky: formatPeriod(period.month, period.year),
       phuongThuc: upsertInputMethod,
+      ...params.auditExtra,
+    }),
+  });
+
+  return reading;
+}
+
+/** Admin điều chỉnh CSC (thay đồng hồ / sửa sự cố). Không propagate sang kỳ sau. */
+export async function adminAdjustOldReading(params: {
+  householdId: string;
+  periodId: string;
+  oldReading: number;
+  reason: string;
+  actorId: string;
+  auditExtra?: Record<string, unknown>;
+  allowPaidEdit?: boolean;
+}) {
+  const reason = params.reason.trim();
+  if (reason.length < 3) {
+    throw new Error("Ghi lý do điều chỉnh CSC (ít nhất 3 ký tự)");
+  }
+  if (params.oldReading < 0 || !Number.isFinite(params.oldReading)) {
+    throw new Error("CSC không hợp lệ");
+  }
+
+  const paidInvoice = await prisma.invoice.findFirst({
+    where: {
+      householdId: params.householdId,
+      periodId: params.periodId,
+      status: InvoiceStatus.PAID,
+    },
+    select: { id: true },
+  });
+  if (paidInvoice && !params.allowPaidEdit) {
+    throw new Error("Không thể sửa CSC — hóa đơn kỳ này đã được xác nhận thu");
+  }
+
+  const [household, period] = await Promise.all([
+    prisma.household.findUniqueOrThrow({
+      where: { id: params.householdId },
+      select: { householdCode: true, meterCode: true, residentName: true },
+    }),
+    prisma.billingPeriod.findUniqueOrThrow({
+      where: { id: params.periodId },
+      select: { month: true, year: true },
+    }),
+  ]);
+
+  const existing = await prisma.meterReading.findUnique({
+    where: {
+      householdId_periodId: {
+        householdId: params.householdId,
+        periodId: params.periodId,
+      },
+    },
+  });
+
+  const csm = existing?.confirmedValue ?? existing?.ocrValue ?? null;
+  if (csm != null && params.oldReading >= csm) {
+    throw new Error(`CSC phải nhỏ hơn CSM (${csm})`);
+  }
+
+  const priorOld = existing?.oldReading;
+  const usageM3 =
+    csm != null && existing?.status === ReadingStatus.CONFIRMED
+      ? calculateUsage(csm, params.oldReading)
+      : null;
+
+  const reading = existing
+    ? await prisma.meterReading.update({
+        where: { id: existing.id },
+        data: {
+          oldReading: params.oldReading,
+          cscManual: true,
+          ...(usageM3 != null ? { usageM3 } : {}),
+        },
+      })
+    : await prisma.meterReading.create({
+        data: {
+          householdId: params.householdId,
+          periodId: params.periodId,
+          oldReading: params.oldReading,
+          cscManual: true,
+          status: ReadingStatus.PENDING,
+          anomalyFlags: "[]",
+        },
+      });
+
+  await logAudit({
+    actorId: params.actorId,
+    action: "READING_CSC_ADJUSTED",
+    entity: "MeterReading",
+    entityId: reading.id,
+    metadata: meterReadingAuditMetadata(reading, household, {
+      ky: formatPeriod(period.month, period.year),
+      lyDo: reason,
+      ...(priorOld != null && priorOld !== params.oldReading
+        ? { cscTruoc: priorOld }
+        : {}),
       ...params.auditExtra,
     }),
   });

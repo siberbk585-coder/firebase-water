@@ -8,6 +8,25 @@ import {
 
 export const AUDIT_LOG_PAGE_SIZE = 50;
 
+/** Luôn hiện trong bộ lọc nhật ký (kể cả count = 0). */
+export const PINNED_AUDIT_FILTER_ACTIONS = ["READING_CSC_ADJUSTED"] as const;
+
+export type AuditActionCount = { action: string; count: number };
+
+export function mergeAuditActionCounts(
+  groups: { action: string; _count: { action: number } }[]
+): AuditActionCount[] {
+  const byAction = new Map(
+    groups.map((g) => [g.action, g._count.action] as const)
+  );
+  for (const action of PINNED_AUDIT_FILTER_ACTIONS) {
+    if (!byAction.has(action)) byAction.set(action, 0);
+  }
+  return [...byAction.entries()]
+    .map(([action, count]) => ({ action, count }))
+    .sort((a, b) => b.count - a.count || a.action.localeCompare(b.action));
+}
+
 export type AuditLogQueryParams = {
   page?: number;
   pageSize?: number;
@@ -103,10 +122,10 @@ export async function queryAuditLogs(params: AuditLogQueryParams = {}) {
     page,
     pageSize,
     totalPages: Math.max(1, Math.ceil(total / pageSize)),
-    actionCounts: actionGroups.map((g) => ({
+    actionCounts: mergeAuditActionCounts(actionGroups).map((g) => ({
       action: g.action,
       label: auditActionLabel(g.action),
-      count: g._count.action,
+      count: g.count,
     })),
   };
 }

@@ -9,6 +9,7 @@ import { formatPeriod, householdInactiveFromLabel, householdStatusLabel } from "
 import { logAudit } from "@/lib/audit";
 import type { SessionUser } from "@/lib/auth";
 import { MobileAdminError } from "@/lib/mobileAdminCollectors";
+import { excludeSandboxHouseholdWhere } from "@/lib/sandboxRoutes";
 
 export async function listHouseholdsForMobile(
   q: string | undefined,
@@ -16,7 +17,7 @@ export async function listHouseholdsForMobile(
   pageSize: number,
   filters?: { status?: HouseholdStatus; routeId?: string }
 ) {
-  const and: Prisma.HouseholdWhereInput[] = [];
+  const and: Prisma.HouseholdWhereInput[] = [excludeSandboxHouseholdWhere()];
 
   if (q?.trim()) {
     and.push({

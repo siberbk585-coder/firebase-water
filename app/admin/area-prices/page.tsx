@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { excludeSandboxRoutesWhere } from "@/lib/sandboxRoutes";
 import { formatCurrency } from "@/lib/billing";
 import { getSystemSettings } from "@/lib/settings";
 import {
@@ -11,6 +12,7 @@ import { createRouteWithPrice, saveRoutePrices, saveVatSettings } from "./action
 export default async function AreaPricesPage() {
   const [routes, settings] = await Promise.all([
     prisma.collectionRoute.findMany({
+      where: excludeSandboxRoutesWhere(),
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: { _count: { select: { households: true } } },
     }),

@@ -2,6 +2,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { latestReading, readingCounts } from "@/lib/household";
 import {
+  excludeSandboxHouseholdWhere,
+  excludeSandboxRoutesWhere,
+} from "@/lib/sandboxRoutes";
+import {
   formatPeriod,
   householdInactiveFromLabel,
   householdStatusLabel,
@@ -19,7 +23,7 @@ export default async function AdminHouseholdsPage({
   const pageSize = 50;
   const skip = (page - 1) * pageSize;
 
-  const where = q?.trim()
+  const searchWhere = q?.trim()
     ? {
         OR: [
           { householdCode: { contains: q.trim(), mode: "insensitive" as const } },
@@ -29,6 +33,10 @@ export default async function AdminHouseholdsPage({
         ],
       }
     : undefined;
+
+  const where = searchWhere
+    ? { AND: [excludeSandboxHouseholdWhere(), searchWhere] }
+    : excludeSandboxHouseholdWhere();
 
   const [households, total, routes] = await Promise.all([
     prisma.household.findMany({
@@ -46,6 +54,7 @@ export default async function AdminHouseholdsPage({
     }),
     prisma.household.count({ where }),
     prisma.collectionRoute.findMany({
+      where: excludeSandboxRoutesWhere(),
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true },
     }),

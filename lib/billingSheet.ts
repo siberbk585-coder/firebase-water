@@ -14,6 +14,7 @@ import {
   ensureCurrentBillingPeriod,
 } from "./billingPeriods";
 import { householdBillableWhere } from "./householdBillable";
+import { excludeSandboxHouseholdWhere, excludeSandboxRoutesWhere } from "./sandboxRoutes";
 import { unitPriceForHousehold } from "./routePricing";
 
 export { currentCalendarPeriod, ensureCurrentBillingPeriod };
@@ -29,6 +30,7 @@ export type BillingSheetRow = {
   householdCode: string;
   unitPrice: number;
   oldReading: number;
+  cscManual: boolean;
   readingId: string | null;
   csm: number | null;
   status: ReadingStatus | null;
@@ -64,8 +66,18 @@ export async function getBillingPeriods() {
   });
 }
 
-export async function getCollectionRoutes() {
+export async function getCollectionRoutes(options?: { includeSandbox?: boolean }) {
   return prisma.collectionRoute.findMany({
+    where: options?.includeSandbox ? undefined : excludeSandboxRoutesWhere(),
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+}
+
+/** Tuyến được gán cho thu hộ (gồm cả sandbox guest khi cần). */
+export async function getAssignedCollectionRoutes(routeIds: string[]) {
+  if (!routeIds.length) return [];
+  return prisma.collectionRoute.findMany({
+    where: { id: { in: routeIds } },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 }
@@ -89,7 +101,7 @@ function routeScopeWhere(
 export async function loadBillingSheetRows(
   periodId: string,
   routeId: string | null,
-  options?: { allowedRouteIds?: string[] }
+  options?: { allowedRouteIds?: string[]; includeSandbox?: boolean }
 ): Promise<BillingSheetRow[]> {
   const period = await prisma.billingPeriod.findUniqueOrThrow({ where: { id: periodId } });
   await ensureActiveHouseholdsInPeriod(periodId);
@@ -97,10 +109,16 @@ export async function loadBillingSheetRows(
   const routeScope = routeScopeWhere(routeId, options?.allowedRouteIds);
   if (routeScope.collectionRouteId === "__denied__") return [];
 
+  const excludeSandbox =
+    options?.includeSandbox !== true &&
+    !routeId &&
+    !options?.allowedRouteIds?.length;
+
   const households = await prisma.household.findMany({
     where: {
       ...householdBillableWhere(period.year, period.month),
       ...routeScope,
+      ...(excludeSandbox ? excludeSandboxHouseholdWhere() : {}),
     },
     include: {
       priceGroup: true,
@@ -167,6 +185,7 @@ export async function loadBillingSheetRows(
     if (
       reading &&
       reading.status !== ReadingStatus.CONFIRMED &&
+      !reading.cscManual &&
       reading.oldReading !== oldReading
     ) {
       pendingOldReadingPatches.push({ id: reading.id, oldReading });
@@ -230,6 +249,7 @@ export async function loadBillingSheetRows(
       householdCode: h.householdCode,
       unitPrice,
       oldReading,
+      cscManual: reading?.cscManual ?? false,
       readingId: reading?.id ?? null,
       csm,
       status: reading?.status ?? null,

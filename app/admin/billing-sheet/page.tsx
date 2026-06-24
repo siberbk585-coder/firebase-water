@@ -247,6 +247,7 @@ export default async function BillingSheetPage({
           vatPercent={vatPercent}
           showRoute={isAll}
           allowPaidEdit
+          allowCscEdit
         />
         ) : (
           <p className="text-[var(--muted)]">

@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import {
   currentCalendarPeriod,
+  getAssignedCollectionRoutes,
   getBillingPeriods,
-  getCollectionRoutes,
   loadBillingSheetRows,
 } from "@/lib/billingSheet";
 import { BillingSheetGrid } from "@/components/BillingSheetGrid";
@@ -22,7 +22,6 @@ import { formatPeriod } from "@/lib/vi";
 import { getVatPercent } from "@/lib/vatServer";
 import { requireCollector } from "@/lib/guards";
 import {
-  filterRoutesForSession,
   getCollectorRouteIds,
   resolveCollectorRouteQuery,
 } from "@/lib/collectorAccess";
@@ -56,13 +55,12 @@ export default async function CollectorBillingSheetPage({
     );
   }
 
-  const [periods, allRoutes, vatPercent] = await Promise.all([
+  const [periods, vatPercent] = await Promise.all([
     getBillingPeriods(),
-    getCollectionRoutes(),
     getVatPercent(),
   ]);
 
-  const routes = filterRoutesForSession(session, allRoutes, allowedRouteIds);
+  const routes = await getAssignedCollectionRoutes(allowedRouteIds);
   const resolvedRoute = resolveCollectorRouteQuery(session, routeParam, allowedRouteIds);
 
   if (resolvedRoute === "__denied__") {

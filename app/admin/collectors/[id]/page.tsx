@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/data/prisma";
 import { UserRole } from "@/lib/types/enums";
+import { isSandboxUsername, excludeSandboxRoutesWhere } from "@/lib/sandboxRoutes";
 import { updateCollectorRoutes } from "../actions";
 import { CollectorStatusButton } from "../CollectorStatusButton";
 
@@ -23,12 +24,15 @@ export default async function CollectorDetailPage({
       },
     }),
     prisma.collectionRoute.findMany({
+      where: excludeSandboxRoutesWhere(),
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true },
     }),
   ]);
 
-  if (!collector || collector.role !== UserRole.COLLECTOR) notFound();
+  if (!collector || collector.role !== UserRole.COLLECTOR || isSandboxUsername(collector.username)) {
+    notFound();
+  }
 
   const assigned = new Set(collector.collectorRoutes.map((r) => r.routeId));
 

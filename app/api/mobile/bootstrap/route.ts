@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import {
-  currentCalendarPeriod,
-  getBillingPeriods,
-  getCollectionRoutes,
-} from "@/lib/billingSheet";
-import {
   filterRoutesForSession,
   getCollectorRouteIds,
   isAdmin,
 } from "@/lib/collectorAccess";
+import {
+  currentCalendarPeriod,
+  getAssignedCollectionRoutes,
+  getBillingPeriods,
+  getCollectionRoutes,
+} from "@/lib/billingSheet";
 import {
   requireStaffSession,
   staffUnauthorized,
@@ -20,15 +21,18 @@ export async function GET() {
   const session = await requireStaffSession();
   if (!session) return staffUnauthorized();
 
-  const [periods, allRoutes, vatPercent] = await Promise.all([
+  const [periods, vatPercent] = await Promise.all([
     getBillingPeriods(),
-    getCollectionRoutes(),
     getVatPercent(),
   ]);
 
   const allowedRouteIds = isAdmin(session)
     ? undefined
     : await getCollectorRouteIds(session.id);
+
+  const allRoutes = isAdmin(session)
+    ? await getCollectionRoutes()
+    : await getAssignedCollectionRoutes(allowedRouteIds ?? []);
 
   const routes = isAdmin(session)
     ? allRoutes

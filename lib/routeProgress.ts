@@ -6,8 +6,15 @@ import {
   getCollectionRoutes,
 } from "./billingSheet";
 import { householdBillableWhere } from "./householdBillable";
+import { excludeSandboxHouseholdWhere } from "./sandboxRoutes";
 
 type RouteCountRow = { collectionRouteId: string; count: bigint };
+type RouteAmountRow = {
+  collectionRouteId: string;
+  invoicedAmount: number;
+  paidAmount: number;
+  unpaidAmount: number;
+};
 
 function pickDefaultPeriod(
   periods: Awaited<ReturnType<typeof getBillingPeriods>>,
@@ -36,7 +43,9 @@ export async function getCurrentPeriodProgress(periodId?: string) {
   const routes = await getCollectionRoutes();
 
   // Tuần tự — tránh mở nhiều kết nối cùng lúc (pool max: 1 trên App Hosting)
-  const billableWhere = householdBillableWhere(current.year, current.month);
+  const billableWhere = {
+    AND: [householdBillableWhere(current.year, current.month), excludeSandboxHouseholdWhere()],
+  };
   const totalActive = await prisma.household.count({ where: billableWhere });
   const withReading = await prisma.meterReading.count({
     where: {
@@ -62,6 +71,44 @@ export async function getCurrentPeriodProgress(periodId?: string) {
       AND h.collection_route_id IS NOT NULL
       AND mr.confirmed_value IS NOT NULL
       AND mr.status IN ('PENDING'::reading_status, 'CONFIRMED'::reading_status)
+      AND NOT EXISTS (
+        SELECT 1 FROM collection_route cr
+        WHERE cr.id = h.collection_route_id
+          AND (cr.code ILIKE 'GUEST-%' OR cr.code ILIKE 'PLAY-%')
+      )
+      AND (
+        h.status = 'ACTIVE'::household_status
+        OR (
+          h.status = 'INACTIVE'::household_status
+          AND h.inactive_from_year IS NOT NULL
+          AND h.inactive_from_month IS NOT NULL
+          AND (
+            h.inactive_from_year > ${current.year}
+            OR (h.inactive_from_year = ${current.year} AND h.inactive_from_month >= ${current.month})
+          )
+        )
+      )
+    GROUP BY h.collection_route_id
+  `;
+  const amountsByRoute = await prisma.$queryRaw<RouteAmountRow[]>`
+    SELECT h.collection_route_id AS "collectionRouteId",
+      COALESCE(SUM(i.total_amount) FILTER (
+        WHERE i.status IN ('ISSUED'::invoice_status, 'PAID'::invoice_status)
+      ), 0)::float AS "invoicedAmount",
+      COALESCE(SUM(i.total_amount) FILTER (
+        WHERE i.status = 'PAID'::invoice_status
+      ), 0)::float AS "paidAmount",
+      COALESCE(SUM(i.total_amount) FILTER (
+        WHERE i.status = 'ISSUED'::invoice_status
+      ), 0)::float AS "unpaidAmount"
+    FROM household h
+    INNER JOIN invoice i ON i.household_id = h.id AND i.period_id = ${current.id}::uuid
+    WHERE h.collection_route_id IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM collection_route cr
+        WHERE cr.id = h.collection_route_id
+          AND (cr.code ILIKE 'GUEST-%' OR cr.code ILIKE 'PLAY-%')
+      )
       AND (
         h.status = 'ACTIVE'::household_status
         OR (
@@ -83,16 +130,34 @@ export async function getCurrentPeriodProgress(periodId?: string) {
   const recordedMap = new Map(
     recordedByRoute.map((r) => [r.collectionRouteId, Number(r.count)])
   );
+  const amountMap = new Map(
+    amountsByRoute.map((r) => [
+      r.collectionRouteId,
+      {
+        invoicedAmount: r.invoicedAmount ?? 0,
+        paidAmount: r.paidAmount ?? 0,
+        unpaidAmount: r.unpaidAmount ?? 0,
+      },
+    ])
+  );
 
   const routeProgress = routes.map((route) => {
     const total = totalByRoute.get(route.id) ?? 0;
     const recorded = recordedMap.get(route.id) ?? 0;
+    const amounts = amountMap.get(route.id) ?? {
+      invoicedAmount: 0,
+      paidAmount: 0,
+      unpaidAmount: 0,
+    };
     return {
       routeId: route.id,
       routeName: route.name,
       total,
       recorded,
       missing: Math.max(0, total - recorded),
+      invoicedAmount: amounts.invoicedAmount,
+      paidAmount: amounts.paidAmount,
+      unpaidAmount: amounts.unpaidAmount,
     };
   });
 

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPeriodProgress } from "@/lib/routeProgress";
 import { formatPeriod, periodStatusLabel } from "@/lib/vi";
 import { PeriodSelector } from "@/components/PeriodSelector";
+import { excludeSandboxHouseholdWhere } from "@/lib/sandboxRoutes";
 
 export default async function AdminDashboardPage({
   searchParams,
@@ -26,18 +27,21 @@ export default async function AdminDashboardPage({
   }
 
   const periodId = progress.period.id;
+  const productionHousehold = excludeSandboxHouseholdWhere();
   const readingByStatus = await prisma.meterReading.groupBy({
     by: ["status"],
-    where: { periodId },
+    where: { periodId, household: productionHousehold },
     _count: { _all: true },
   });
   const invoiceByStatus = await prisma.invoice.groupBy({
     by: ["status"],
-    where: { periodId },
+    where: { periodId, household: productionHousehold },
     _count: { _all: true },
     _sum: { totalAmount: true },
   });
-  const missingPdf = await prisma.invoice.count({ where: { periodId, pdfPath: null } });
+  const missingPdf = await prisma.invoice.count({
+    where: { periodId, pdfPath: null, household: productionHousehold },
+  });
   const waterUsage = await loadMonthlyWaterUsage(
     {
       id: progress.period.id,
@@ -52,20 +56,16 @@ export default async function AdminDashboardPage({
   const confirmedReadings = readingCount(ReadingStatus.CONFIRMED);
   const rejectedReadings = readingCount(ReadingStatus.REJECTED);
 
-  const invoiceCount = invoiceByStatus.reduce((n, r) => n + r._count._all, 0);
   const issuedInvoices =
     invoiceByStatus.find((r) => r.status === InvoiceStatus.ISSUED)?._count._all ?? 0;
   const paidInvoices =
     invoiceByStatus.find((r) => r.status === InvoiceStatus.PAID)?._count._all ?? 0;
-  const invoiceTotalAmount = invoiceByStatus.reduce(
-    (sum, r) => sum + (r._sum.totalAmount ?? 0),
-    0
-  );
   const paidTotalAmount =
     invoiceByStatus.find((r) => r.status === InvoiceStatus.PAID)?._sum.totalAmount ?? 0;
+  const unpaidTotalAmount =
+    invoiceByStatus.find((r) => r.status === InvoiceStatus.ISSUED)?._sum.totalAmount ?? 0;
 
   const missingReadings = Math.max(0, progress.totalActive - progress.withReading);
-  const remainingMoney = Math.max(0, invoiceTotalAmount - paidTotalAmount);
   const billingSheetHref = `/admin/billing-sheet?period=${progress.period.id}&route=all`;
 
   return (
@@ -108,17 +108,18 @@ export default async function AdminDashboardPage({
           href={`${billingSheetHref}&status=pending`}
         />
         <MetricCard
-          label="Hóa đơn"
-          value={invoiceCount}
-          hint={`${missingPdf} hóa đơn chưa có PDF`}
+          label="Chưa thu"
+          value={formatCurrency(unpaidTotalAmount)}
+          hint={`${issuedInvoices} hóa đơn`}
           tone="blue"
+          href={`${billingSheetHref}&status=unpaid`}
         />
         <MetricCard
           label="Đã thu"
           value={formatCurrency(paidTotalAmount)}
-          hint={`Còn ${formatCurrency(remainingMoney)}`}
+          hint={`${paidInvoices} hóa đơn`}
           tone="pink"
-          href={`${billingSheetHref}&status=unpaid`}
+          href={`${billingSheetHref}&status=paid`}
         />
       </section>
 
@@ -147,6 +148,30 @@ export default async function AdminDashboardPage({
                 <p className="mt-1 text-xs text-[var(--muted)]">
                   {route.recorded}/{route.total} đã ghi, còn {route.missing}
                 </p>
+                <dl className="mt-2 space-y-0.5 text-xs">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <dt className="text-[var(--muted)]">Đã chốt</dt>
+                    <dd className="font-semibold tabular-nums">
+                      {formatCurrency(route.invoicedAmount)}
+                    </dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <dt className="text-[var(--muted)]">Đã thu</dt>
+                    <dd className="font-semibold tabular-nums text-emerald-700">
+                      {formatCurrency(route.paidAmount)}
+                    </dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <dt className="text-[var(--muted)]">Còn lại</dt>
+                    <dd
+                      className={`font-semibold tabular-nums ${
+                        route.unpaidAmount > 0 ? "text-amber-800" : ""
+                      }`}
+                    >
+                      {formatCurrency(route.unpaidAmount)}
+                    </dd>
+                  </div>
+                </dl>
               </Link>
             );
           })}

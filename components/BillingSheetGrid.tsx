@@ -79,6 +79,8 @@ type Props = {
   showRoute?: boolean;
   /** ADMIN — cho phép sửa chỉ số hộ đã thu */
   allowPaidEdit?: boolean;
+  /** ADMIN — cho phép điều chỉnh CSC thủ công */
+  allowCscEdit?: boolean;
 };
 
 export function BillingSheetGrid({
@@ -89,15 +91,23 @@ export function BillingSheetGrid({
   vatPercent = 0,
   showRoute = false,
   allowPaidEdit = false,
+  allowCscEdit = false,
 }: Props) {
   const [localRows, setLocalRows] = useState(rows);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [cscDrafts, setCscDrafts] = useState<Record<string, string>>({});
+  const [cscEditing, setCscEditing] = useState<Record<string, boolean>>({});
+  const [cscConfirmRow, setCscConfirmRow] = useState<BillingSheetRow | null>(null);
+  const [cscFocusId, setCscFocusId] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [savedHint, setSavedHint] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const cscInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const cscConfirmDialogRef = useRef<HTMLDialogElement>(null);
+  const cscBlurLockRef = useRef(false);
   const printSelection = useBillingPrintSelectionOptional();
 
   useEffect(() => {
@@ -120,6 +130,19 @@ export function BillingSheetGrid({
     const t = window.setTimeout(() => setSavedHint(null), 4000);
     return () => window.clearTimeout(t);
   }, [savedHint]);
+
+  useEffect(() => {
+    const el = cscConfirmDialogRef.current;
+    if (!el) return;
+    if (cscConfirmRow && !el.open) el.showModal();
+    if (!cscConfirmRow && el.open) el.close();
+  }, [cscConfirmRow]);
+
+  useEffect(() => {
+    if (!cscFocusId) return;
+    cscInputRefs.current[cscFocusId]?.focus();
+    setCscFocusId(null);
+  }, [cscFocusId, cscEditing]);
 
   const searchMatchedRows = useMemo(() => {
     if (!deferredSearchQuery.trim()) return localRows;
@@ -162,6 +185,139 @@ export function BillingSheetGrid({
   function getDraft(householdId: string, row: BillingSheetRow): string {
     if (drafts[householdId] !== undefined) return drafts[householdId] ?? "";
     return initDraft(row);
+  }
+
+  function getCscDraft(householdId: string, row: BillingSheetRow): string {
+    if (cscDrafts[householdId] !== undefined) return cscDrafts[householdId] ?? "";
+    return String(row.oldReading);
+  }
+
+  function getEffectiveOldReading(householdId: string, row: BillingSheetRow): number {
+    const raw = getCscDraft(householdId, row);
+    const n = parseFloat(raw);
+    return !Number.isNaN(n) ? n : row.oldReading;
+  }
+
+  function setCscDraft(householdId: string, value: string) {
+    setCscDrafts((d) => ({ ...d, [householdId]: value }));
+    setErrors((e) => {
+      const next = { ...e };
+      delete next[`csc:${householdId}`];
+      return next;
+    });
+  }
+
+  function isCscRowLocked(row: BillingSheetRow): boolean {
+    return Boolean(row.paid && !allowPaidEdit);
+  }
+
+  function openCscConfirm(row: BillingSheetRow) {
+    setCscConfirmRow(row);
+  }
+
+  function confirmCscEdit() {
+    if (!cscConfirmRow) return;
+    const row = cscConfirmRow;
+    setCscConfirmRow(null);
+    setCscEditing((e) => ({ ...e, [row.householdId]: true }));
+    setCscDraft(row.householdId, String(row.oldReading));
+    setCscFocusId(row.householdId);
+  }
+
+  function cancelCscEdit(row: BillingSheetRow) {
+    setCscEditing((e) => {
+      const next = { ...e };
+      delete next[row.householdId];
+      return next;
+    });
+    setCscDrafts((d) => {
+      const next = { ...d };
+      delete next[row.householdId];
+      return next;
+    });
+    setErrors((e) => {
+      const next = { ...e };
+      delete next[`csc:${row.householdId}`];
+      return next;
+    });
+  }
+
+  function endCscEdit(householdId: string) {
+    setCscEditing((e) => {
+      const next = { ...e };
+      delete next[householdId];
+      return next;
+    });
+  }
+
+  function renderCscControl(row: BillingSheetRow, variant: "mobile" | "desktop") {
+    const locked = isCscRowLocked(row);
+    const editing = Boolean(cscEditing[row.householdId]);
+    const inputClass =
+      variant === "mobile"
+        ? "input mt-1 py-2 text-right font-mono tabular-nums disabled:cursor-not-allowed disabled:opacity-50"
+        : "billing-sheet-csm-input input w-full py-1 text-right font-mono tabular-nums disabled:cursor-not-allowed disabled:opacity-50";
+
+    if (!allowCscEdit || locked) {
+      return (
+        <span className="font-mono font-semibold tabular-nums">
+          {row.oldReading}
+          {row.cscManual ? (
+            <span className="text-amber-600" title="CSC điều chỉnh thủ công">
+              {" "}
+              *
+            </span>
+          ) : null}
+        </span>
+      );
+    }
+
+    if (!editing) {
+      return (
+        <button
+          type="button"
+          className={[
+            "font-mono font-semibold tabular-nums text-inherit disabled:opacity-50",
+            variant === "mobile" ? "mt-1 block w-full text-right" : "",
+          ].join(" ")}
+          disabled={saving === row.householdId}
+          onClick={() => openCscConfirm(row)}
+        >
+          {row.oldReading}
+          {row.cscManual ? (
+            <span className="text-amber-600" title="CSC điều chỉnh thủ công">
+              {" "}
+              *
+            </span>
+          ) : null}
+        </button>
+      );
+    }
+
+    return (
+      <input
+        ref={(el) => {
+          cscInputRefs.current[row.householdId] = el;
+        }}
+        type="number"
+        inputMode="decimal"
+        className={variant === "mobile" ? `${inputClass} mt-1` : inputClass}
+        value={getCscDraft(row.householdId, row)}
+        disabled={saving === row.householdId}
+        onChange={(e) => setCscDraft(row.householdId, e.target.value)}
+        onBlur={() => void handleCscBlur(row)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            cancelCscEdit(row);
+          }
+        }}
+      />
+    );
   }
 
   function setDraft(householdId: string, value: string) {
@@ -220,17 +376,129 @@ export function BillingSheetGrid({
     );
   }
 
+  async function handleCscBlur(row: BillingSheetRow) {
+    if (cscBlurLockRef.current || !cscEditing[row.householdId]) return;
+
+    const oldReading = parseFloat(getCscDraft(row.householdId, row));
+    if (Number.isNaN(oldReading) || oldReading < 0) {
+      setErrors((e) => ({
+        ...e,
+        [`csc:${row.householdId}`]: "Nhập CSC hợp lệ",
+      }));
+      cancelCscEdit(row);
+      return;
+    }
+    if (oldReading === row.oldReading) {
+      cancelCscEdit(row);
+      return;
+    }
+
+    cscBlurLockRef.current = true;
+    try {
+      await saveCscRow(row, "Xác nhận sửa CSC trên bảng thu");
+    } finally {
+      cscBlurLockRef.current = false;
+    }
+  }
+
+  async function saveCscRow(row: BillingSheetRow, reason: string) {
+    const oldReading = parseFloat(getCscDraft(row.householdId, row));
+    if (Number.isNaN(oldReading) || oldReading < 0) {
+      setErrors((e) => ({
+        ...e,
+        [`csc:${row.householdId}`]: "Nhập CSC hợp lệ",
+      }));
+      return;
+    }
+    if (oldReading === row.oldReading && row.cscManual) {
+      cancelCscEdit(row);
+      return;
+    }
+
+    const csmDraft = getDraft(row.householdId, row);
+    const csmNum = csmDraft === "" ? row.csm : parseFloat(csmDraft);
+    if (csmNum != null && !Number.isNaN(csmNum) && oldReading >= csmNum) {
+      setErrors((e) => ({
+        ...e,
+        [`csc:${row.householdId}`]: `CSC phải nhỏ hơn CSM (${csmNum})`,
+      }));
+      return;
+    }
+
+    const trimmedReason = reason.trim();
+    if (trimmedReason.length < 3) {
+      setErrors((e) => ({
+        ...e,
+        [`csc:${row.householdId}`]: "Lý do điều chỉnh không hợp lệ",
+      }));
+      return;
+    }
+
+    setSaving(row.householdId);
+    try {
+      const res = await fetch("/api/admin/readings/adjust-old", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId: row.householdId,
+          periodId,
+          oldReading,
+          reason: trimmedReason,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setErrors((e) => ({
+          ...e,
+          [`csc:${row.householdId}`]: body.error ?? "Lỗi lưu CSC",
+        }));
+        return;
+      }
+      const csm = body.reading.confirmedValue ?? row.csm;
+      const preview =
+        csm != null
+          ? previewBillingRow(oldReading, csm, row.unitPrice, vatPercent)
+          : null;
+      patchRow(row.householdId, {
+        oldReading: body.reading.oldReading,
+        cscManual: true,
+        readingId: body.reading.id,
+        usageM3: body.invoice?.usageM3 ?? body.reading.usageM3 ?? preview?.usageM3 ?? row.usageM3,
+        subtotalAmount: body.invoice?.subtotalAmount ?? preview?.subtotal ?? row.subtotalAmount,
+        vatAmount: body.invoice?.vatAmount ?? preview?.vatAmount ?? row.vatAmount,
+        totalAmount: body.invoice?.totalAmount ?? preview?.totalAmount ?? row.totalAmount,
+        invoiceId: body.invoice?.id ?? row.invoiceId,
+        invoiceStatus: body.invoice?.status ?? row.invoiceStatus,
+      });
+      setCscDrafts((d) => {
+        const next = { ...d };
+        delete next[row.householdId];
+        return next;
+      });
+      endCscEdit(row.householdId);
+      setSavedHint(`Đã lưu CSC hộ ${row.householdCode}`);
+    } catch {
+      setErrors((e) => ({
+        ...e,
+        [`csc:${row.householdId}`]: "Lỗi kết nối",
+      }));
+    } finally {
+      setSaving(null);
+    }
+  }
+
   async function saveRow(row: BillingSheetRow) {
     const raw = getDraft(row.householdId, row);
     const confirmedValue = parseFloat(raw);
+    const effectiveOld = getEffectiveOldReading(row.householdId, row);
     if (Number.isNaN(confirmedValue) || confirmedValue <= 0) {
       setErrors((e) => ({ ...e, [row.householdId]: "Nhập CSM hợp lệ" }));
       return;
     }
-    if (confirmedValue <= row.oldReading) {
+    if (confirmedValue <= effectiveOld) {
       setErrors((e) => ({
         ...e,
-        [row.householdId]: `CSM phải cao hơn CSC (${row.oldReading})`,
+        [row.householdId]: `CSM phải cao hơn CSC (${effectiveOld})`,
       }));
       return;
     }
@@ -255,7 +523,7 @@ export function BillingSheetGrid({
         row.householdId,
         body.reading,
         row.unitPrice,
-        row.oldReading,
+        body.reading.oldReading ?? effectiveOld,
         body.invoice ?? null
       );
       setDrafts((d) => {
@@ -301,7 +569,7 @@ export function BillingSheetGrid({
         row.householdId,
         data.reading,
         row.unitPrice,
-        row.oldReading,
+        data.reading.oldReading ?? getEffectiveOldReading(row.householdId, row),
         data.invoice ?? null
       );
       setDrafts((d) => {
@@ -415,11 +683,12 @@ export function BillingSheetGrid({
     const draft = getDraft(row.householdId, row);
     const draftNum = draft === "" ? null : parseFloat(draft);
     const usePreview = draftNum != null && !Number.isNaN(draftNum);
+    const effectiveOld = getEffectiveOldReading(row.householdId, row);
     const preview = usePreview
-      ? rowPreview(row, draftNum, vatPercent)
+      ? previewBillingRow(effectiveOld, draftNum, row.unitPrice, vatPercent)
       : row.csm != null
-        ? rowPreview(row, row.csm, vatPercent)
-        : rowPreview(row, null, vatPercent);
+        ? previewBillingRow(effectiveOld, row.csm, row.unitPrice, vatPercent)
+        : previewBillingRow(effectiveOld, null, row.unitPrice, vatPercent);
     const amounts = resolveBillingDisplay(row, preview, usePreview);
     const missing = row.csm == null && draft === "";
     const pending = row.status === ReadingStatus.PENDING;
@@ -527,10 +796,10 @@ export function BillingSheetGrid({
 
               <div className="mobile-meta-grid">
                 <div>
-                  <span className="mobile-meta-label">Số cũ</span>
-                  <span className="font-mono font-semibold tabular-nums">
-                    {row.oldReading}
+                  <span className="mobile-meta-label">
+                    Số cũ{row.cscManual ? " *" : ""}
                   </span>
+                  {renderCscControl(row, "mobile")}
                 </div>
                 <div>
                   <span className="mobile-meta-label">Số mới</span>
@@ -591,6 +860,11 @@ export function BillingSheetGrid({
               {errors[row.householdId] && (
                 <p className="mt-3 rounded-md bg-red-50 px-2 py-1.5 text-xs font-medium text-[var(--danger)]">
                   {errors[row.householdId]}
+                </p>
+              )}
+              {errors[`csc:${row.householdId}`] && (
+                <p className="mt-2 rounded-md bg-red-50 px-2 py-1.5 text-xs font-medium text-[var(--danger)]">
+                  {errors[`csc:${row.householdId}`]}
                 </p>
               )}
 
@@ -816,7 +1090,7 @@ export function BillingSheetGrid({
                   </div>
                 </td>
                 <td className="billing-sheet-col-num billing-sheet-col-old text-right font-mono tabular-nums">
-                  {row.oldReading}
+                  {renderCscControl(row, "desktop")}
                 </td>
                 <td className="billing-sheet-col-num billing-sheet-col-new text-right">
                   <input
@@ -911,7 +1185,12 @@ export function BillingSheetGrid({
                   {errors[row.householdId] && (
                     <p className="text-[10px] text-[var(--danger)]">{errors[row.householdId]}</p>
                   )}
-                  {row.status && !errors[row.householdId] && (
+                  {errors[`csc:${row.householdId}`] && (
+                    <p className="text-[10px] text-[var(--danger)]">
+                      {errors[`csc:${row.householdId}`]}
+                    </p>
+                  )}
+                  {row.status && !errors[row.householdId] && !errors[`csc:${row.householdId}`] && (
                     <p className="text-[10px] text-[var(--muted)]">
                       {readingStatusLabel(row.status)}
                     </p>
@@ -962,6 +1241,39 @@ export function BillingSheetGrid({
         </tbody>
       </table>
       </div>
+
+      <dialog
+        ref={cscConfirmDialogRef}
+        className="mx-auto my-auto w-[min(100%,22rem)] max-w-sm rounded-xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-xl backdrop:bg-black/40"
+        onClose={() => setCscConfirmRow(null)}
+      >
+        <div className="px-4 py-4">
+          <p className="text-center text-sm font-medium">
+            Bạn xác nhận muốn sửa chỉ số cũ?
+          </p>
+          {cscConfirmRow ? (
+            <p className="mt-2 text-center text-xs text-[var(--muted)]">
+              {cscConfirmRow.householdCode} · {cscConfirmRow.residentName}
+            </p>
+          ) : null}
+          <div className="mt-4 flex justify-center gap-2">
+            <button
+              type="button"
+              className="btn btn-secondary py-1.5 text-sm"
+              onClick={() => setCscConfirmRow(null)}
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary py-1.5 text-sm"
+              onClick={confirmCscEdit}
+            >
+              Xác nhận
+            </button>
+          </div>
+        </div>
+      </dialog>
     </>
   );
 }
