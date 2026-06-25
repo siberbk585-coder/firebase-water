@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCollectorForMobile, MobileAdminError } from "@/lib/mobileAdminCollectors";
-import {
-  requireAdminSession,
-  staffUnauthorized,
-} from "@/lib/staffAuth";
+import { requireAdminApiAccess } from "@/lib/staffAuth";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireAdminSession();
-  if (!session) return staffUnauthorized();
+  const auth = await requireAdminApiAccess();
+  if (!auth.ok) return auth.response;
 
   try {
     const { id } = await params;

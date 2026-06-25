@@ -38,7 +38,7 @@ export default async function AdminCollectorsPage({
         <div>
           <h1 className="text-2xl font-bold">Tài khoản thu hộ</h1>
           <p className="text-sm text-[var(--muted)]">
-            Người thu chỉ được nhập chỉ số, xác nhận thanh toán và in hóa đơn trên khu vực được gán.
+            Chỉ quản trị viên được tạo tài khoản, đặt mật khẩu và phân khu vực thu.
           </p>
         </div>
         <AddCollectorModal routes={routes} />

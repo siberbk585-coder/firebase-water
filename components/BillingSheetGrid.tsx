@@ -305,7 +305,8 @@ export function BillingSheetGrid({
         value={getCscDraft(row.householdId, row)}
         disabled={saving === row.householdId}
         onChange={(e) => setCscDraft(row.householdId, e.target.value)}
-        onBlur={() => void handleCscBlur(row)}
+        onBlur={() => scheduleCscBlur(row)}
+        title="Sửa xong — click ra ngoài hoặc Enter để lưu"
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -374,6 +375,12 @@ export function BillingSheetGrid({
     setLocalRows((prev) =>
       prev.map((r) => (r.householdId === householdId ? { ...r, ...patch } : r))
     );
+  }
+
+  function scheduleCscBlur(row: BillingSheetRow) {
+    window.setTimeout(() => {
+      void handleCscBlur(row);
+    }, 0);
   }
 
   async function handleCscBlur(row: BillingSheetRow) {

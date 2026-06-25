@@ -119,6 +119,7 @@ export function auditActionLabel(action: string): string {
     COLLECTOR_DEACTIVATED: "Đóng tài khoản thu hộ",
     COLLECTOR_REACTIVATED: "Mở lại tài khoản thu hộ",
     COLLECTOR_ROUTES_UPDATED: "Cập nhật khu vực thu hộ",
+    COLLECTOR_PASSWORD_RESET: "Đổi mật khẩu tài khoản thu hộ",
     HOUSEHOLD_CREATED: "Thêm hộ mới",
     HOUSEHOLD_DEACTIVATED: "Ngưng sử dụng hộ",
     HOUSEHOLD_REACTIVATED: "Kích hoạt lại hộ",

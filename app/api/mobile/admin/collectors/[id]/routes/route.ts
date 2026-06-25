@@ -4,10 +4,7 @@ import {
   MobileAdminError,
   updateCollectorRoutesForMobile,
 } from "@/lib/mobileAdminCollectors";
-import {
-  requireAdminSession,
-  staffUnauthorized,
-} from "@/lib/staffAuth";
+import { requireAdminApiAccess } from "@/lib/staffAuth";
 
 const schema = z.object({
   routeIds: z.array(z.string()).min(1),
@@ -17,13 +14,13 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireAdminSession();
-  if (!session) return staffUnauthorized();
+  const auth = await requireAdminApiAccess();
+  if (!auth.ok) return auth.response;
 
   try {
     const { id } = await params;
     const body = schema.parse(await request.json());
-    await updateCollectorRoutesForMobile(session, id, body.routeIds);
+    await updateCollectorRoutesForMobile(auth.session, id, body.routeIds);
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof MobileAdminError) {

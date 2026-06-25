@@ -33,6 +33,34 @@ export async function requireAdminSession(): Promise<SessionUser | null> {
   return session;
 }
 
+export type AdminApiAccess =
+  | { ok: true; session: SessionUser }
+  | { ok: false; response: NextResponse };
+
+/** API mobile/web — phân biệt chưa đăng nhập (401) và không phải admin (403). */
+export async function requireAdminApiAccess(): Promise<AdminApiAccess> {
+  const session = await getSession();
+  if (!session) {
+    return { ok: false, response: staffUnauthorized() };
+  }
+  if (!isAdmin(session)) {
+    return {
+      ok: false,
+      response: staffForbidden(
+        "Chỉ quản trị viên được quản lý tài khoản thu hộ."
+      ),
+    };
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: session.id },
+    select: { isActive: true },
+  });
+  if (!user?.isActive) {
+    return { ok: false, response: staffUnauthorized() };
+  }
+  return { ok: true, session };
+}
+
 export function staffForbidden(message = "Không có quyền") {
   return NextResponse.json({ error: message }, { status: 403 });
 }

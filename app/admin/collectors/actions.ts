@@ -8,6 +8,7 @@ import { collectorInternalPhone, hashPassword } from "@/lib/auth";
 import { ensureFirebaseUser } from "@/lib/firebaseAuth";
 import { requireAdmin } from "@/lib/guards";
 import { logAudit } from "@/lib/audit";
+import { isSandboxUsername } from "@/lib/sandboxRoutes";
 
 function collectorsUrl(params?: { error?: string; created?: string }) {
   const q = new URLSearchParams();
@@ -184,6 +185,71 @@ export async function deactivateCollector(
 
   revalidatePath("/admin/collectors");
   revalidatePath(`/admin/collectors/${collectorId}`);
+}
+
+export async function resetCollectorPassword(
+  collectorId: string,
+  formData: FormData
+): Promise<void> {
+  const admin = await requireAdmin();
+  const password = String(formData.get("password") ?? "").trim();
+  const confirm = String(formData.get("passwordConfirm") ?? "").trim();
+
+  if (password.length < 6) {
+    redirect(
+      `/admin/collectors/${collectorId}?error=${encodeURIComponent("Mật khẩu tối thiểu 6 ký tự.")}`
+    );
+  }
+  if (password !== confirm) {
+    redirect(
+      `/admin/collectors/${collectorId}?error=${encodeURIComponent("Mật khẩu xác nhận không khớp.")}`
+    );
+  }
+
+  const collector = await prisma.user.findUnique({
+    where: { id: collectorId },
+    select: { role: true, username: true, name: true },
+  });
+  if (!collector || collector.role !== UserRole.COLLECTOR) {
+    redirect(collectorsUrl({ error: "Không tìm thấy tài khoản thu hộ." }));
+  }
+  if (!collector.username?.trim()) {
+    redirect(
+      `/admin/collectors/${collectorId}?error=${encodeURIComponent("Tài khoản thiếu tên đăng nhập.")}`
+    );
+  }
+  if (isSandboxUsername(collector.username)) {
+    redirect(
+      `/admin/collectors/${collectorId}?error=${encodeURIComponent("Không đổi mật khẩu tài khoản sandbox.")}`
+    );
+  }
+
+  const passwordHash = await hashPassword(password);
+  await ensureFirebaseUser({
+    account: collector.username,
+    password,
+    role: UserRole.COLLECTOR,
+    name: collector.name,
+  });
+
+  await prisma.user.update({
+    where: { id: collectorId },
+    data: { passwordHash },
+  });
+
+  await logAudit({
+    actorId: admin.id,
+    action: "COLLECTOR_PASSWORD_RESET",
+    entity: "User",
+    entityId: collectorId,
+    metadata: { username: collector.username },
+  });
+
+  revalidatePath("/admin/collectors");
+  revalidatePath(`/admin/collectors/${collectorId}`);
+  redirect(
+    `/admin/collectors/${collectorId}?created=${encodeURIComponent("Đã đổi mật khẩu.")}`
+  );
 }
 
 export async function reactivateCollector(

@@ -8,6 +8,7 @@ import type { SessionUser } from "@/lib/auth";
 import {
   excludeSandboxCollectorsWhere,
   excludeSandboxRoutesWhere,
+  isSandboxUsername,
 } from "@/lib/sandboxRoutes";
 
 export class MobileAdminError extends Error {
@@ -197,6 +198,52 @@ export async function updateCollectorRoutesForMobile(
     entity: "User",
     entityId: collectorId,
     metadata: { username: collector.username, khuVuc: uniqueRouteIds.length, source: "MOBILE" },
+  });
+}
+
+export async function resetCollectorPasswordForMobile(
+  admin: SessionUser,
+  collectorId: string,
+  password: string
+) {
+  const nextPassword = password.trim();
+  if (nextPassword.length < 6) {
+    throw new MobileAdminError("Mật khẩu tối thiểu 6 ký tự.");
+  }
+
+  const collector = await prisma.user.findUnique({
+    where: { id: collectorId },
+    select: { role: true, username: true, name: true },
+  });
+  if (!collector || collector.role !== UserRole.COLLECTOR) {
+    throw new MobileAdminError("Không tìm thấy tài khoản thu hộ.", 404);
+  }
+  if (!collector.username?.trim()) {
+    throw new MobileAdminError("Tài khoản thiếu tên đăng nhập.");
+  }
+  if (isSandboxUsername(collector.username)) {
+    throw new MobileAdminError("Không đổi mật khẩu tài khoản sandbox.");
+  }
+
+  const passwordHash = await hashPassword(nextPassword);
+  await ensureFirebaseUser({
+    account: collector.username,
+    password: nextPassword,
+    role: UserRole.COLLECTOR,
+    name: collector.name,
+  });
+
+  await prisma.user.update({
+    where: { id: collectorId },
+    data: { passwordHash },
+  });
+
+  await logAudit({
+    actorId: admin.id,
+    action: "COLLECTOR_PASSWORD_RESET",
+    entity: "User",
+    entityId: collectorId,
+    metadata: { username: collector.username, source: "MOBILE" },
   });
 }
 

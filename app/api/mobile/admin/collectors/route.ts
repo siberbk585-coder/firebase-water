@@ -5,10 +5,7 @@ import {
   listCollectorsForMobile,
   MobileAdminError,
 } from "@/lib/mobileAdminCollectors";
-import {
-  requireAdminSession,
-  staffUnauthorized,
-} from "@/lib/staffAuth";
+import { requireAdminApiAccess } from "@/lib/staffAuth";
 
 const createSchema = z.object({
   username: z.string().trim().min(1),
@@ -18,20 +15,20 @@ const createSchema = z.object({
 });
 
 export async function GET() {
-  const session = await requireAdminSession();
-  if (!session) return staffUnauthorized();
+  const auth = await requireAdminApiAccess();
+  if (!auth.ok) return auth.response;
 
   const collectors = await listCollectorsForMobile();
   return NextResponse.json({ collectors });
 }
 
 export async function POST(request: Request) {
-  const session = await requireAdminSession();
-  if (!session) return staffUnauthorized();
+  const auth = await requireAdminApiAccess();
+  if (!auth.ok) return auth.response;
 
   try {
     const body = createSchema.parse(await request.json());
-    const result = await createCollectorForMobile(session, body);
+    const result = await createCollectorForMobile(auth.session, body);
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     if (e instanceof MobileAdminError) {

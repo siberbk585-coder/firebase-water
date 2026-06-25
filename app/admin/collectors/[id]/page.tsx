@@ -5,16 +5,17 @@ import { UserRole } from "@/lib/types/enums";
 import { isSandboxUsername, excludeSandboxRoutesWhere } from "@/lib/sandboxRoutes";
 import { updateCollectorRoutes } from "../actions";
 import { CollectorStatusButton } from "../CollectorStatusButton";
+import { ResetCollectorPasswordForm } from "../ResetCollectorPasswordForm";
 
 export default async function CollectorDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; created?: string }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, created } = await searchParams;
 
   const [collector, routes] = await Promise.all([
     prisma.user.findUnique({
@@ -71,6 +72,17 @@ export default async function CollectorDetailPage({
           {error}
         </div>
       )}
+
+      {created && (
+        <div className="card mb-4 border-green-200 bg-green-50 py-3 text-sm text-green-800">
+          {created}
+        </div>
+      )}
+
+      <section className="card mb-4">
+        <h2 className="mb-4 text-lg font-semibold">Mật khẩu đăng nhập</h2>
+        <ResetCollectorPasswordForm collectorId={collector.id} />
+      </section>
 
       <section className="card">
         <h2 className="mb-4 text-lg font-semibold">Khu vực được thu</h2>

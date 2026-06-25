@@ -3,21 +3,18 @@ import {
   MobileAdminError,
   setCollectorActiveForMobile,
 } from "@/lib/mobileAdminCollectors";
-import {
-  requireAdminSession,
-  staffUnauthorized,
-} from "@/lib/staffAuth";
+import { requireAdminApiAccess } from "@/lib/staffAuth";
 
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireAdminSession();
-  if (!session) return staffUnauthorized();
+  const auth = await requireAdminApiAccess();
+  if (!auth.ok) return auth.response;
 
   try {
     const { id } = await params;
-    await setCollectorActiveForMobile(session, id, true);
+    await setCollectorActiveForMobile(auth.session, id, true);
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof MobileAdminError) {
