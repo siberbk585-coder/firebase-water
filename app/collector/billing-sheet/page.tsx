@@ -13,6 +13,8 @@ import {
   parseBillingSheetStatusFilter,
   type BillingSheetStatusFilter,
 } from "@/lib/billingSheetFilters";
+import { summarizeBillingSheetMoney } from "@/lib/billingSheetSummary";
+import { BillingSheetCollectorSummary } from "@/components/BillingSheetCollectorSummary";
 import { BillingPeriodSelect } from "@/components/BillingPeriodSelect";
 import { BillingRouteSelect } from "@/components/BillingRouteSelect";
 import { BillingPrintPanel } from "@/components/BillingPrintPanel";
@@ -100,6 +102,10 @@ export default async function CollectorBillingSheetPage({
   const confirmedCount = countBillingSheetStatusFilter(rows, "confirmed");
   const unpaidCount = countBillingSheetStatusFilter(rows, "unpaid");
   const paidCount = countBillingSheetStatusFilter(rows, "paid");
+  const moneySummary = summarizeBillingSheetMoney(rows, vatPercent);
+  const summaryRouteLabel = isAll
+    ? "các khu vực được gán"
+    : (activeRoute?.name ?? "khu vực");
 
   function billingHref(extra?: Record<string, string>) {
     const p = new URLSearchParams();
@@ -136,6 +142,11 @@ export default async function CollectorBillingSheetPage({
               : ""}
         </p>
       </div>
+
+      <BillingSheetCollectorSummary
+        summary={moneySummary}
+        routeLabel={summaryRouteLabel}
+      />
 
       <BillingPrintSelectionProvider>
         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
