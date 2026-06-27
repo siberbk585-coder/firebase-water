@@ -42,11 +42,7 @@ async function createPrismaClient(): Promise<PrismaClient> {
   }
 
   const { user, password, database, instance } = parseDbUrl(url);
-  const { Connector } = await import("@google-cloud/cloud-sql-connector");
-  const connector = new Connector();
-  const clientOpts = await connector.getOptions({ instanceConnectionName: instance });
-  const pool = new Pool({
-    ...clientOpts,
+  const poolOpts = {
     user,
     password,
     database,
@@ -55,7 +51,20 @@ async function createPrismaClient(): Promise<PrismaClient> {
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 10_000,
     allowExitOnIdle: true,
-  });
+  };
+
+  // Cloud Run: dùng Unix socket (run.googleapis.com/cloudsql-instances) — ổn định hơn Connector API
+  const pool =
+    process.env.K_SERVICE != null
+      ? new Pool({ ...poolOpts, host: `/cloudsql/${instance}` })
+      : new Pool({
+          ...(await (async () => {
+            const { Connector } = await import("@google-cloud/cloud-sql-connector");
+            const connector = new Connector();
+            return connector.getOptions({ instanceConnectionName: instance });
+          })()),
+          ...poolOpts,
+        });
 
   return new PrismaClient({
     adapter: new PrismaPg(pool),
